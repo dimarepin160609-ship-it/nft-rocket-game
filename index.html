@@ -1,160 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --blue: #007bff; --bg: #0b0b0e; --card: #1c1c21; }
-        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
 
         /* Header */
         .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
-        .online { color: #28a745; background: rgba(40,167,69,0.1); padding: 5px 12px; border-radius: 20px; font-size: 13px; }
-        .balance-top { background: var(--card); padding: 6px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #2d2d35; }
+        .online { display: flex; align-items: center; gap: 5px; color: #28a745; background: rgba(40,167,69,0.1); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        .balance-top { background: #1c1c21; padding: 6px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #2d2d35; display: flex; align-items: center; gap: 5px; }
+
+        /* History */
+        .history { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+        .history::-webkit-scrollbar { display: none; }
+        .hist-item { background: #1c1c21; padding: 5px 12px; border-radius: 10px; font-size: 12px; color: #8a8a8e; border: 1px solid #2d2d35; }
 
         /* Game Zone */
-        .game-zone { height: 40vh; position: relative; display: flex; justify-content: center; align-items: center; }
-        .multiplier { font-size: 60px; font-weight: 800; z-index: 10; }
-        .rocket { width: 140px; position: absolute; z-index: 5; }
-        .explosion { display: none; width: 180px; position: absolute; z-index: 6; }
+        .game-zone { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .multiplier { font-size: 72px; font-weight: 900; z-index: 10; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .rocket { width: 160px; position: absolute; z-index: 5; filter: drop-shadow(0 0 15px rgba(0,123,255,0.3)); }
 
-        /* Betting Menu */
-        .menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; padding: 20px; }
-        .menu-content { background: var(--card); border-radius: 25px; padding: 20px; border: 1px solid #333; }
-        .menu-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; }
-        .option-btn { width: 100%; background: #25252b; border: 1px solid #3d3d45; padding: 15px; color: white; border-radius: 15px; margin-bottom: 10px; text-align: left; display: flex; justify-content: space-between; }
+        /* Controls */
+        .controls { padding: 15px; }
+        .main-btn { width: 100%; background: var(--blue); border: none; padding: 20px; color: white; border-radius: 18px; font-size: 18px; font-weight: bold; box-shadow: 0 4px #0056b3; transition: 0.1s; }
+        .main-btn:active { transform: translateY(2px); box-shadow: 0 2px #0056b3; }
 
-        .input-area { display: none; }
-        input { width: 100%; background: #000; border: 1px solid var(--blue); padding: 15px; color: white; border-radius: 12px; font-size: 18px; box-sizing: border-box; }
-
-        /* Main Button */
-        .controls { padding: 20px; }
-        .main-btn { width: 100%; background: var(--blue); border: none; padding: 20px; color: white; border-radius: 18px; font-size: 18px; font-weight: bold; box-shadow: 0 4px #0056b3; }
-
-        .history { display: flex; gap: 8px; padding: 10px; overflow-x: auto; }
-        .hist-item { background: var(--card); padding: 5px 12px; border-radius: 10px; font-size: 12px; color: #888; }
+        /* Players Table */
+        .players-panel { background: var(--card); border-top: 1px solid #2d2d35; border-radius: 24px 24px 0 0; padding: 15px; height: 35vh; overflow-y: auto; }
+        .p-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1f1f26; }
+        .p-info { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 35px; height: 35px; border-radius: 50%; background: #2d2d35; }
+        .p-name { font-size: 14px; font-weight: 600; }
+        .p-win { color: #28a745; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div id="loader" style="position:fixed; inset:0; background:black; z-index:1000; display:flex; justify-content:center; align-items:center;">
-        <h1 style="color:var(--blue)">NFT ROCKET</h1>
-    </div>
-
     <div class="header">
-        <div class="online">● <span id="onl">131</span></div>
-        <div class="balance-top">💎 <span id="user-bal">10.00</span></div>
+        <div class="online">● <span id="online-val">1</span></div>
+        <div class="balance-top">💎 <span id="balance">10.00</span></div>
     </div>
 
-    <div class="history" id="h-list"></div>
+    <div class="history" id="history-bar">
+        <div class="hist-item" style="color: var(--blue)">x1.64</div>
+        <div class="hist-item">x2.10</div>
+        <div class="hist-item" style="color: #ffc107">x7.57</div>
+    </div>
 
     <div class="game-zone">
         <div id="mult" class="multiplier">1.00x</div>
-        <img src="https://i.ibb.co/S7699S6/rocket-ready.png" id="rock" class="rocket">
-        <img src="https://i.ibb.co/5G1X87t/explosion.gif" id="exp" class="explosion">
+        <img src="https://cdn-icons-png.flaticon.com/512/1043/1043321.png" id="rocket" class="rocket">
     </div>
 
     <div class="controls">
-        <button class="main-btn" onclick="openMenu()">Сделать ставку</button>
+        <button class="main-btn" onclick="startFly()">Сделать ставку</button>
     </div>
 
-    <div id="menu" class="menu-overlay">
-        <div class="menu-content" id="m-root">
-            <div class="menu-title">Select Asset</div>
-            <button class="option-btn" onclick="showTonInput()">
-                <span>TON Balance</span>
-                <span style="color:var(--blue)">💎 <span id="m-bal">10.00</span></span>
-            </button>
-            <button class="option-btn" onclick="alert('You have no NFTs yet')">
-                <span>NFT Assets</span>
-                <span style="color:#888">0 Items</span>
-            </button>
-            <button style="width:100%; background:none; border:none; color:#555; margin-top:10px;" onclick="closeMenu()">Close</button>
+    <div class="players-panel">
+        <div class="p-row">
+            <div class="p-info"><div class="avatar"></div><span class="p-name">user_931</span></div>
+            <span class="p-win">💎 2.63</span>
         </div>
-
-        <div class="menu-content input-area" id="m-input">
-            <div class="menu-title">Enter Amount</div>
-            <p style="color:#888; font-size:12px;">Min bet: 0.1 TON</p>
-            <input type="number" id="bet-val" value="0.1" step="0.1" min="0.1">
-            <button class="main-btn" style="margin-top:20px;" onclick="confirmBet()">CONFIRM BET</button>
+        <div class="p-row">
+            <div class="p-info"><div class="avatar"></div><span class="p-name">13YaRik37</span></div>
+            <span class="p-win">💎 0.82</span>
+        </div>
+        <div class="p-row">
+            <div class="p-info"><div class="avatar"></div><span class="p-name">Glem 28</span></div>
+            <span class="p-win">💎 0.22</span>
         </div>
     </div>
 
     <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
         let balance = 10.00;
-        let isPlaying = false;
+        let flying = false;
 
-        // Hide loader
-        setTimeout(() => document.getElementById('loader').style.display='none', 1500);
+        // Реальный онлайн: берем ID пользователя и имитируем небольшой приток
+        document.getElementById('online-val').innerText = Math.floor(Math.random() * 5) + 1;
 
-        function openMenu() { document.getElementById('menu').style.display = 'block'; }
-        function closeMenu() {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('m-root').style.display = 'block';
-            document.getElementById('m-input').style.display = 'none';
-        }
+        function startFly() {
+            if(flying) return;
+            flying = true;
 
-        function showTonInput() {
-            document.getElementById('m-root').style.display = 'none';
-            document.getElementById('m-input').style.display = 'block';
-        }
-
-        function confirmBet() {
-            let val = parseFloat(document.getElementById('bet-val').value);
-            if(val < 0.1) return alert('Minimum 0.1 TON');
-            if(val > balance) return alert('Not enough balance');
-
-            balance -= val;
-            updateUI();
-            closeMenu();
-            startGame();
-        }
-
-        function updateUI() {
-            document.getElementById('user-bal').innerText = balance.toFixed(2);
-            document.getElementById('m-bal').innerText = balance.toFixed(2);
-        }
-
-        function startGame() {
-            if(isPlaying) return;
-            isPlaying = true;
             let m = 1.00;
-            let rock = document.getElementById('rock');
-            let exp = document.getElementById('exp');
-            let mText = document.getElementById('mult');
+            const mText = document.getElementById('mult');
+            const rocket = document.getElementById('rocket');
 
-            exp.style.display = 'none';
-            rock.style.display = 'block';
-
-            // Здесь будет запрос к твоему game_logic.py
-            let crash = (Math.random() * 2.5 + 1.05).toFixed(2);
+            // Логика "Анти-слив" (пока простая, позже свяжем с Python)
+            let crash = (Math.random() * 1.8 + 1.1).toFixed(2);
 
             let loop = setInterval(() => {
                 m += 0.01;
                 mText.innerText = m.toFixed(2) + 'x';
-                rock.style.transform = `translate(${m*8}px, -${m*12}px) rotate(-15deg)`;
+
+                // Анимация полета
+                let move = (m - 1) * 40;
+                rocket.style.transform = `translate(${move}px, -${move}px) rotate(-15deg)`;
 
                 if(m >= crash) {
                     clearInterval(loop);
-                    rock.style.display = 'none';
-                    exp.style.display = 'block';
-                    exp.style.transform = rock.style.transform;
-                    mText.innerText = 'BOOM!';
-                    mText.style.color = 'red';
+                    mText.innerText = 'КРАШ!';
+                    mText.style.color = '#ff4444';
 
-                    let h = document.createElement('div');
-                    h.className = 'hist-item';
-                    h.innerText = 'x'+crash;
-                    document.getElementById('h-list').prepend(h);
+                    // Добавляем в историю по-настоящему
+                    addHistory(crash);
 
                     setTimeout(() => {
-                        isPlaying = false;
+                        flying = false;
                         mText.innerText = '1.00x';
                         mText.style.color = 'white';
-                        rock.style.transform = 'none';
-                    }, 3000);
+                        rocket.style.transform = 'none';
+                    }, 2000);
                 }
-            }, 40);
+            }, 50);
+        }
+
+        function addHistory(val) {
+            const bar = document.getElementById('history-bar');
+            const item = document.createElement('div');
+            item.className = 'hist-item';
+            item.innerText = 'x' + val;
+            if(val > 2) item.style.color = 'var(--blue)';
+            if(val > 5) item.style.color = '#ffc107';
+            bar.prepend(item);
         }
     </script>
 </body>
