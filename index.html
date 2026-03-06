@@ -27,28 +27,24 @@
         .history-item { background: #1c1c21; padding: 4px 14px; border-radius: 50px; font-size: 12px; font-weight: bold; border: 1px solid #222; min-width: 45px; text-align: center; }
 
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
-        #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; transition: color 0.2s; }
+        #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; }
         #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
 
-        #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 250px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
-        .bets-header { padding: 15px; text-align: center; color: #555; font-size: 14px; font-weight: 500; border-bottom: 1px solid #1c1c21; }
+        #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 260px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
+        .bets-header { padding: 12px; text-align: center; color: #555; font-size: 13px; border-bottom: 1px solid #1c1c21; }
         #bets-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
 
-        .bet-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #0b0b0e; border-radius: 12px; margin-bottom: 8px; border: 1px solid #222; }
-        .bet-info { display: flex; flex-direction: column; gap: 2px; }
-        .bet-user { font-weight: bold; font-size: 14px; }
-        .bet-status { font-size: 11px; text-transform: uppercase; font-weight: 900; }
-        .status-playing { color: var(--blue); }
-        .status-win { color: var(--green); }
-        .status-crash { color: var(--red); }
+        .bet-card { display: flex; justify-content: space-between; padding: 12px; background: #0b0b0e; border-radius: 12px; margin-bottom: 8px; border: 1px solid #222; }
+        .u-name { font-weight: bold; font-size: 14px; display: block; }
+        .u-stat { font-size: 11px; font-weight: 900; text-transform: uppercase; }
 
         .controls { background: var(--card); padding: 15px 15px 25px; border-top: 1px solid #1c1c21; }
-        #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; box-shadow: 0 6px 20px rgba(0, 102, 255, 0.3); }
-        #bet-trigger.win { background: var(--green); box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3); }
-        #bet-trigger:disabled { background: #222 !important; opacity: 0.7; box-shadow: none; }
+        #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; }
+        #bet-trigger.win { background: var(--green); }
+        #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
 
-        #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: none; }
-        #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s; padding: 25px 20px 40px; }
+        #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; }
+        #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s ease-out; padding: 25px 20px 40px; }
         #bet-modal.active { bottom: 0; }
 
         .nav-bar { background: var(--card); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1c1c21; }
@@ -76,22 +72,22 @@
 </div>
 
 <div id="bets-container">
-    <div class="bets-header" id="bets-count">Ставок нет</div>
+    <div class="bets-header" id="bets-count">Все ставки</div>
     <div id="bets-list"></div>
 </div>
 
 <div class="controls">
-    <button id="bet-trigger" onclick="openBetMenu()">Сделать ставку</button>
+    <button id="bet-trigger" onclick="handleMainAction()">Сделать ставку</button>
 </div>
 
 <div id="bet-modal-overlay" onclick="closeBetMenu()"></div>
 <div id="bet-modal">
-    <div style="color:#888; margin-bottom:15px; display:flex; justify-content:space-between">
+    <div style="display:flex; justify-content:space-between; margin-bottom:15px; color:#888;">
         <span>Сумма (TON)</span>
-        <span onclick="setMaxBet()" style="color:var(--blue); font-weight:bold">MAX</span>
+        <span onclick="setMax()" style="color:var(--blue); font-weight:bold;">MAX</span>
     </div>
-    <input type="number" id="bet-amount-input" value="0.1" step="0.1" min="0.1" style="width:100%; padding:15px; border-radius:15px; background:#0b0b0e; border:1px solid #333; color:white; font-size:20px; text-align:center; outline:none; box-sizing:border-box">
-    <button id="confirm-bet-btn" onclick="confirmBet()" style="width:100%; margin-top:20px; padding:20px; border-radius:20px; background:var(--blue); border:none; color:white; font-weight:900;">ПОДТВЕРДИТЬ</button>
+    <input type="number" id="bet-amount-input" value="0.1" step="0.1" min="0.1" style="width:100%; padding:18px; border-radius:15px; background:#0b0b0e; border:1px solid #333; color:white; font-size:22px; text-align:center; outline:none; box-sizing:border-box;">
+    <button id="confirm-bet-btn" onclick="confirmBet()" style="width:100%; margin-top:20px; padding:20px; border-radius:20px; background:var(--blue); border:none; color:white; font-weight:900; font-size:18px;">ПОДТВЕРДИТЬ</button>
 </div>
 
 <div class="nav-bar">
@@ -112,85 +108,78 @@
     const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
     let balance = 10.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting";
+    let betLock = false; // КРИТИЧЕСКИЙ ЗАМОК ДЛЯ БАГА СТАВОК
 
     // ИСТОРИЯ
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
         list.innerHTML = "";
-        const data = snap.val();
-        if(!data) return;
-        Object.values(data).reverse().forEach(val => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            const n = parseFloat(val);
-            item.style.color = n < 1.5 ? '#3498db' : n < 2.5 ? 'var(--green)' : '#9b59b6';
-            item.innerText = n.toFixed(2) + 'x';
-            list.appendChild(item);
+        const data = snap.val(); if(!data) return;
+        Object.values(data).reverse().forEach(v => {
+            const i = document.createElement('div');
+            i.className = 'history-item';
+            const n = parseFloat(v);
+            i.style.color = n < 1.5 ? '#3498db' : n < 2.5 ? 'var(--green)' : '#9b59b6';
+            i.innerText = n.toFixed(2) + 'x';
+            list.appendChild(i);
         });
     });
 
-    // ОБРАБОТКА ИГРЫ
+    // ОСНОВНОЙ ЦИКЛ ИГРЫ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
         gameStatus = data.status;
         
+        document.getElementById('mult').innerText = data.multiplier.toFixed(2) + "x";
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
-        const multEl = document.getElementById('mult');
-        multEl.innerText = data.multiplier.toFixed(2) + "x";
 
-        if(data.status === "waiting") {
-            // СБРОС ТОЛЬКО ПРИ ПЕРЕХОДЕ В WAITING
+        if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
+                // Сброс раунда
                 currentBet = 0;
                 hasCashedOut = false;
+                betLock = false; 
                 btn.disabled = false;
                 btn.innerText = "Сделать ставку";
                 btn.classList.remove('win');
-                multEl.style.color = "white";
+                document.getElementById('mult').style.color = "white";
                 rocket.style.transform = "translate(0,0)";
             }
-        }
-        else if(data.status === "flying") {
+        } 
+        else if(gameStatus === "flying") {
             let off = Math.min((data.multiplier - 1) * 45, 280);
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
-
+            
             if(currentBet > 0 && !hasCashedOut) {
                 btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
                 btn.classList.add('win');
                 btn.disabled = false;
             }
-        }
-        else if(data.status === "crash") {
-            multEl.style.color = "var(--red)";
+        } 
+        else if(gameStatus === "crash") {
+            document.getElementById('mult').style.color = "var(--red)";
             btn.disabled = true;
             btn.innerText = "БУМ!";
-
-            // Если не успел забрать - шлем в базу статус проигрыша один раз
             if(currentBet > 0 && !hasCashedOut) {
                 db.ref('bets/' + userId).update({ status: "crash" });
-                // Локально помечаем, чтобы не слать повторно
-                hasCashedOut = true; 
+                hasCashedOut = true;
             }
         }
     });
 
-    function setMaxBet() {
-        document.getElementById('bet-amount-input').value = balance.toFixed(1);
+    function handleMainAction() {
+        if(gameStatus === "flying" && currentBet > 0 && !hasCashedOut) {
+            handleCashOut();
+        } else if(gameStatus === "waiting" && currentBet === 0) {
+            openBetMenu();
+        }
     }
 
     function openBetMenu() {
-        // Если летим и есть ставка - кнопка работает как CashOut
-        if(gameStatus === "flying" && currentBet > 0 && !hasCashedOut) {
-            handleCashOut();
-            return;
-        }
-        // Открыть модалку можно только если нет активной ставки и игра в ожидании
-        if(gameStatus === "waiting" && currentBet === 0) {
-            document.getElementById('bet-modal-overlay').style.display = 'block';
-            setTimeout(() => document.getElementById('bet-modal').classList.add('active'), 10);
-        }
+        document.getElementById('bet-modal-overlay').style.display = 'block';
+        setTimeout(() => document.getElementById('bet-modal').classList.add('active'), 10);
     }
 
     function closeBetMenu() {
@@ -198,15 +187,20 @@
         setTimeout(() => document.getElementById('bet-modal-overlay').style.display = 'none', 300);
     }
 
+    function setMax() {
+        document.getElementById('bet-amount-input').value = Math.floor(balance * 10) / 10;
+    }
+
     function confirmBet() {
-        // Жесткая блокировка повторного нажатия
-        if(currentBet > 0 || gameStatus !== "waiting") return;
+        // ПРОВЕРКА ЗАМКА
+        if(betLock || currentBet > 0 || gameStatus !== "waiting") return;
 
         let amt = parseFloat(document.getElementById('bet-amount-input').value);
         if(isNaN(amt) || amt < 0.1) return tg.showAlert("Мин. ставка 0.1 TON");
-        if(balance < amt) return tg.showAlert("Недостаточно TON!");
+        if(balance < amt) return tg.showAlert("Мало TON на балансе!");
 
-        // Сначала локальная фиксация, потом сеть
+        // АКТИВАЦИЯ ЗАМКА
+        betLock = true;
         currentBet = amt;
         balance -= amt;
         document.getElementById('balance-val').innerText = balance.toFixed(2);
@@ -229,61 +223,48 @@
         hasCashedOut = true;
 
         let m = parseFloat(document.getElementById('mult').innerText);
-        let winAmt = currentBet * m;
-        balance += winAmt;
+        let win = currentBet * m;
+        balance += win;
         document.getElementById('balance-val').innerText = balance.toFixed(2);
 
-        db.ref('bets/' + userId).update({
-            status: "win",
-            out: m,
-            winAmount: winAmt
-        });
-
+        db.ref('bets/' + userId).update({ status: "win", out: m });
+        
         const btn = document.getElementById('bet-trigger');
         btn.innerText = "ВЫ ЗАБРАЛИ!";
         btn.classList.remove('win');
         btn.disabled = true;
     }
 
-    // Список ставок с корректным обновлением
+    // ТАБЛИЦА СТАВОК (ИСПРАВЛЕН ВЫВОД СУММЫ)
     db.ref('bets').on('value', snap => {
         const list = document.getElementById('bets-list');
-        const countHeader = document.getElementById('bets-count');
         list.innerHTML = "";
-        const bets = snap.val();
-
-        if(!bets) {
-            countHeader.innerText = "Ставок нет";
-            return;
-        }
-
-        const entries = Object.values(bets);
-        countHeader.innerText = `Ставок: ${entries.length}`;
-
-        entries.forEach(b => {
-            const div = document.createElement('div');
-            div.className = 'bet-item';
-
-            let sText = "В ИГРЕ", sClass = "status-playing", rSide = `${b.amount} TON`;
+        const data = snap.val(); if(!data) return;
+        
+        Object.values(data).forEach(b => {
+            const card = document.createElement('div');
+            card.className = 'bet-card';
+            
+            let sTxt = "В игре", sClr = "var(--blue)", valTxt = `${b.amount} TON`;
 
             if(b.status === "win") {
-                sText = `ВЫИГРЫШ ${b.out.toFixed(2)}x`;
-                sClass = "status-win";
-                rSide = `<span style="color:var(--green)">+${(b.amount * b.out).toFixed(2)}</span>`;
+                sTxt = `${b.out.toFixed(2)}x`;
+                sClr = "var(--green)";
+                valTxt = `+${(b.amount * b.out).toFixed(2)} TON`;
             } else if(b.status === "crash") {
-                sText = "БУМ!";
-                sClass = "status-crash";
-                rSide = `<span style="color:#555">-${b.amount}</span>`;
+                sTxt = "БУМ";
+                sClr = "var(--red)";
+                valTxt = `-${b.amount} TON`;
             }
 
-            div.innerHTML = `
-                <div class="bet-info">
-                    <span class="bet-user">${b.name}</span>
-                    <span class="bet-status ${sClass}">${sText}</span>
+            card.innerHTML = `
+                <div>
+                    <span class="u-name">${b.name}</span>
+                    <span class="u-stat" style="color:${sClr}">${sTxt}</span>
                 </div>
-                <div class="bet-val" style="font-weight:bold">${rSide}</div>
+                <div style="font-weight:900; align-self:center; font-size:14px;">${valTxt}</div>
             `;
-            list.appendChild(div);
+            list.appendChild(card);
         });
     });
 
@@ -291,6 +272,7 @@
     db.ref('online/' + userId).onDisconnect().remove();
     db.ref('online').on('value', s => document.getElementById('online-val').innerText = s.numChildren() || 1);
 
+    // ЛОАДЕР
     let p = 0; let l = setInterval(() => {
         p += 25; document.getElementById('f-line').style.width = p + '%';
         if(p >= 100) { clearInterval(l); setTimeout(() => { document.getElementById('loader').style.display='none'; }, 400); }
@@ -298,3 +280,4 @@
 </script>
 </body>
 </html>
+
