@@ -3,47 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Rocket Multiplayer</title>
+    <title>NFTRocket Multiplayer</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; }
+        :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; --green: #28a745; --red: #ff4444; }
         body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
 
-        /* ЛОАДЕР */
+        /* КЛАССНЫЙ ЛОАДЕР */
         #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .bar { width: 150px; height: 4px; background: #1c1c21; border-radius: 2px; margin-top: 20px; overflow: hidden; }
-        #f { width: 0%; height: 100%; background: var(--blue); transition: 0.1s; }
+        #loader h2 { font-size: 28px; letter-spacing: 4px; margin: 0; background: linear-gradient(90deg, #fff, var(--blue), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 2s infinite linear; }
+        @keyframes shine { 0% { background-position: -100px; } 100% { background-position: 100px; } }
+        .bar { width: 200px; height: 2px; background: #1c1c21; border-radius: 10px; margin-top: 15px; overflow: hidden; }
+        #f { width: 0%; height: 100%; background: var(--blue); box-shadow: 0 0 10px var(--blue); }
 
-        .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
-        #game-status { color: #555; font-weight: bold; text-transform: uppercase; font-size: 14px; text-align: center; width: 100%; }
+        .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; z-index: 10; }
+        #online-tag { background: rgba(40, 167, 69, 0.1); border: 1px solid var(--green); color: var(--green); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        #balance-top { font-weight: bold; font-size: 16px; }
 
-        /* ИГРОВАЯ ЗОНА */
-        #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
-        #mult { font-size: 72px; font-weight: 900; z-index: 11; text-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        #game-status { color: #555; font-weight: bold; text-transform: uppercase; font-size: 12px; text-align: center; margin-top: 5px; letter-spacing: 1px; }
+
+        #game-zone { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #mult { font-size: 80px; font-weight: 900; z-index: 11; position: relative; }
 
         /* РАКЕТА */
-        #r-container { width: 180px; height: 180px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; }
-        #rocket { width: 100%; display: block; }
+        #r-container { width: 150px; height: 150px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; transition: 0.1s linear; }
+        #rocket { width: 100%; }
         #explosion { width: 100%; display: none; }
 
-        /* КНОПКА */
-        #bet-trigger { background: var(--blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: bold; width: 90%; margin: 20px auto; cursor: pointer; }
-        #bet-trigger:disabled { background: #2d2d35; color: #555; }
+        /* ТАБЛИЦА СТАВОК */
+        .leaderboard { background: var(--card); border-radius: 20px 20px 0 0; padding: 15px; flex-shrink: 0; max-height: 250px; overflow-y: auto; border-top: 1px solid #222; }
+        .p-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1c1c21; }
+        .p-name { font-weight: bold; font-size: 14px; display: flex; flex-direction: column; }
+        .p-status-sub { font-size: 10px; text-transform: uppercase; margin-top: 2px; }
+        .status-win { color: var(--green); }
+        .status-play { color: var(--blue); }
+        .status-lose { color: var(--red); }
 
-        #bets-table { padding: 10px; max-height: 150px; overflow-y: auto; }
-        .p-row { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--card); margin-bottom: 4px; border-radius: 8px; font-size: 13px; }
+        #bet-trigger { background: var(--blue); color: white; border: none; padding: 20px; font-size: 18px; font-weight: 900; cursor: pointer; border-radius: 0; }
+        #bet-trigger:disabled { background: #2d2d35; color: #555; }
     </style>
 </head>
 <body>
-    <div id="loader"><div class="bar"><div id="f"></div></div></div>
+    <div id="loader">
+        <h2>NFTROCKET</h2>
+        <div class="bar"><div id="f"></div></div>
+    </div>
 
     <div class="header">
+        <div id="online-tag">● <span id="online-val">1</span> ONLINE</div>
         <div id="balance-top">💎 <span id="balance-val">10.00</span></div>
     </div>
 
-    <div id="game-status">ПОДКЛЮЧЕНИЕ...</div>
+    <div id="game-status">ПОДКЛЮЧЕНИЕ К СЕТИ...</div>
 
     <div id="game-zone">
         <h1 id="mult">1.00x</h1>
@@ -53,11 +66,12 @@
         </div>
     </div>
 
-    <div id="bets-table"></div>
+    <div class="leaderboard" id="bets-table">
+        </div>
+
     <button id="bet-trigger" onclick="handleMainAction()">СДЕЛАТЬ СТАВКУ</button>
 
     <script>
-        // ИНИЦИАЛИЗАЦИЯ
         const firebaseConfig = { databaseURL: "https://nftrocket-cb448-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -69,6 +83,12 @@
         let hasCashedOut = false;
         let serverMultiplier = 1.00;
         let gameStatus = "waiting";
+
+        // ЛОГИКА ОНЛАЙНА
+        const onlineRef = db.ref('online/' + userName);
+        onlineRef.set(true);
+        onlineRef.onDisconnect().remove();
+        db.ref('online').on('value', (s) => { document.getElementById('online-val').innerText = s.numChildren() || 1; });
 
         // СЛУШАЕМ СЕРВЕР
         db.ref('game').on('value', (snapshot) => {
@@ -86,7 +106,7 @@
             const rContainer = document.getElementById('r-container');
 
             if(data.status === "waiting") {
-                sLabel.innerText = `ДО СТАРТА: ${data.wait}с`;
+                sLabel.innerText = `ДО ВЗЛЕТА: ${data.wait}с`;
                 mText.innerText = "1.00x";
                 mText.style.color = "white";
                 rocket.style.display = 'block';
@@ -100,9 +120,9 @@
             }
 
             if(data.status === "flying") {
-                sLabel.innerText = "РАКЕТА ЛЕТИТ!";
+                sLabel.innerText = "ОЖИДАНИЕ КРАША...";
                 mText.innerText = data.multiplier.toFixed(2) + "x";
-                let off = (data.multiplier - 1) * 50;
+                let off = (data.multiplier - 1) * 40;
                 rContainer.style.transform = `translate(calc(-50% + ${off}px), calc(-50% - ${off}px)) rotate(-15deg)`;
 
                 if(currentBet > 0 && !hasCashedOut) {
@@ -117,49 +137,72 @@
                 mText.style.color = "#ff4444";
                 rocket.style.display = 'none';
                 explosion.style.display = 'block';
-                if(!hasCashedOut && currentBet > 0) {
+
+                // Если не успел забрать - в базе пишем BOOM
+                if(currentBet > 0 && !hasCashedOut) {
+                    db.ref('bets/' + userName).update({ status: "lose" });
                     btn.disabled = true;
                     btn.innerText = "СГОРЕЛО";
                 }
-                setTimeout(() => { currentBet = 0; hasCashedOut = false; }, 2000);
+
+                setTimeout(() => {
+                    currentBet = 0;
+                    hasCashedOut = false;
+                }, 2000);
             }
         });
 
-        // СПИСОК СТАВОК
+        // ЛИДЕРБОРД
         db.ref('bets').on('value', (snapshot) => {
             const bets = snapshot.val();
             const table = document.getElementById('bets-table');
             table.innerHTML = "";
             if(bets) {
                 Object.values(bets).forEach(b => {
-                    table.innerHTML += `<div class="p-row"><span>👤 ${b.name}</span><span>${b.status}</span></div>`;
+                    let statusHtml = "";
+                    if(b.status === "win") statusHtml = `<span class="p-status-sub status-win">ВЫИГРЫШ ${b.out}x</span>`;
+                    else if(b.status === "lose") statusHtml = `<span class="p-status-sub status-lose">БУМ</span>`;
+                    else statusHtml = `<span class="p-status-sub status-play">В ИГРЕ...</span>`;
+
+                    table.innerHTML += `
+                        <div class="p-row">
+                            <div class="p-name">
+                                <span>👤 ${b.name}</span>
+                                ${statusHtml}
+                            </div>
+                            <div style="font-weight:bold">${b.amount} 💎</div>
+                        </div>`;
                 });
             }
         });
 
         function handleMainAction() {
             if(gameStatus === "waiting") {
-                currentBet = 1.0; // Ставка по умолчанию
-                db.ref('bets/' + userName).set({ name: userName, status: "В игре" });
+                currentBet = 1.0;
+                db.ref('bets/' + userName).set({ name: userName, amount: 1.0, status: "playing" });
                 document.getElementById('bet-trigger').disabled = true;
-                document.getElementById('bet-trigger').innerText = "СТАВКА ПРИНЯТА";
+                document.getElementById('bet-trigger').innerText = "ОЖИДАЕМ ВЗЛЕТА";
             } else if(gameStatus === "flying" && currentBet > 0) {
                 hasCashedOut = true;
                 let win = currentBet * serverMultiplier;
                 balance += win;
                 document.getElementById('balance-val').innerText = balance.toFixed(2);
-                db.ref('bets/' + userName).update({ status: "Вывел x" + serverMultiplier.toFixed(2) });
-                document.getElementById('bet-trigger').innerText = "ВЫ ПРИНЯЛИ!";
+                db.ref('bets/' + userName).update({ status: "win", out: serverMultiplier.toFixed(2) });
+                document.getElementById('bet-trigger').innerText = "УСПЕШНО!";
                 document.getElementById('bet-trigger').disabled = true;
             }
         }
 
-        // Лоадер
+        // КЛАССНЫЙ ЛОАДЕР
         let p=0;
-        let i = setInterval(() => {
-            p += 10; document.getElementById('f').style.width = p + '%';
-            if(p >= 100) { clearInterval(i); document.getElementById('loader').style.display = 'none'; }
-        }, 100);
+        let interval = setInterval(() => {
+            p += 2;
+            document.getElementById('f').style.width = p + '%';
+            if(p >= 100) {
+                clearInterval(interval);
+                setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+            }
+        }, 30);
     </script>
 </body>
 </html>
