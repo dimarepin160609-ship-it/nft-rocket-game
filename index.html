@@ -73,6 +73,13 @@
     <div class="balance-badge">💎 <span id="balance-val">10.00</span></div>
 </div>
 
+<div class="history-row" id="history-list"></div>
+
+<div id="game-zone">
+    <h1 id="mult">1.00x</h1>
+    <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
+</div>
+
 <div class="history-row" id="history-list">
     </div>
 
@@ -125,11 +132,43 @@
     let balance = 10.00, selectedAmount = 0.1, currentBet = 0, hasCashedOut = false, gameStatus = "waiting";
 
     // --- ЛОГИКА ИСТОРИИ КОЭФФИЦИЕНТОВ ---
-    db.ref('history').limitToLast(10).on('value', snap => {
+    db.ref('history').limitToLast(12).on('value', snap => {
         const historyList = document.getElementById('history-list');
-        historyList.innerHTML = "";
+        if (!historyList) return;
+
+        historyList.innerHTML = ""; // Полностью очищаем ленту от статики (LIVE и т.д.)
         const data = snap.val();
-        if(!data) return;
+
+        if(!data) {
+            // Если история пуста, можно оставить пустую строку или один пустой бабл
+            return;
+        }
+
+        // Превращаем объект в массив и разворачиваем, чтобы новые были СЛЕВА
+        const historyArray = Object.values(data).reverse();
+
+        historyArray.forEach(val => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+
+            const num = parseFloat(val);
+
+            // Раскрашиваем точно по рангам (как в image_7eb39d)
+            if (num < 1.2) {
+                item.style.color = '#3498db'; // Синий
+            } else if (num < 2.0) {
+                item.style.color = 'var(--green)'; // Зеленый
+            } else if (num < 10.0) {
+                item.style.color = '#9b59b6'; // Фиолетовый
+            } else {
+                item.style.color = '#f1c40f'; // Золотой для рекордов
+                item.style.fontWeight = '900';
+            }
+
+            item.innerText = num.toFixed(2) + 'x';
+            historyList.appendChild(item);
+        });
+    });
 
         // Разворачиваем историю, чтобы новые были слева
         Object.values(data).reverse().forEach(val => {
