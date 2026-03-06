@@ -1,159 +1,160 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFTRocket</title>
     <style>
-        /* ОСНОВНОЙ ДИЗАЙН (Темная тема как на фото) */
-        body { background: #0b0b0e; color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        :root { --blue: #007bff; --bg: #0b0b0e; --card: #1c1c21; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; overflow: hidden; height: 100vh; }
 
-        /* ВЕРХНЯЯ ПАНЕЛЬ: Онлайн и Баланс */
-        .header { display: flex; justify-content: space-between; padding: 12px 16px; align-items: center; }
-        .online { display: flex; align-items: center; gap: 6px; background: rgba(40, 167, 69, 0.1); color: #28a745; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-        .balance { display: flex; align-items: center; gap: 8px; background: #1c1c21; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        /* Header */
+        .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
+        .online { color: #28a745; background: rgba(40,167,69,0.1); padding: 5px 12px; border-radius: 20px; font-size: 13px; }
+        .balance-top { background: var(--card); padding: 6px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #2d2d35; }
 
-        /* ИСТОРИЯ КОЭФФИЦИЕНТОВ */
-        .history { display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-        .history::-webkit-scrollbar { display: none; }
-        .hist-item { background: #1c1c21; padding: 5px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; color: #8a8a8e; border: 1px solid #2d2d35; }
-        .hist-blue { color: #007bff; border-color: #007bff; }
-        .hist-gold { color: #ffc107; border-color: #ffc107; }
+        /* Game Zone */
+        .game-zone { height: 40vh; position: relative; display: flex; justify-content: center; align-items: center; }
+        .multiplier { font-size: 60px; font-weight: 800; z-index: 10; }
+        .rocket { width: 140px; position: absolute; z-index: 5; }
+        .explosion { display: none; width: 180px; position: absolute; z-index: 6; }
 
-        /* ИГРОВАЯ ЗОНА С АНИМАЦИЕЙ */
-        .game-area { flex-grow: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .multiplier { font-size: 64px; font-weight: 800; z-index: 10; margin-bottom: 30px; transition: 0.1s; }
-        .rocket-container { position: relative; width: 150px; height: 150px; z-index: 5; }
-        .rocket-img { width: 100%; transition: 0.1s linear; filter: drop-shadow(0 0 15px rgba(0, 123, 255, 0.2)); }
+        /* Betting Menu */
+        .menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; padding: 20px; }
+        .menu-content { background: var(--card); border-radius: 25px; padding: 20px; border: 1px solid #333; }
+        .menu-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; }
+        .option-btn { width: 100%; background: #25252b; border: 1px solid #3d3d45; padding: 15px; color: white; border-radius: 15px; margin-bottom: 10px; text-align: left; display: flex; justify-content: space-between; }
 
-        /* КНОПКА СТАВКИ */
-        .controls { padding: 0 16px 16px; }
-        .bet-btn { width: 100%; background: #007bff; border: none; padding: 18px; color: white; border-radius: 16px; font-size: 18px; font-weight: 700; box-shadow: 0 4px 0 #0056b3; cursor: pointer; transition: 0.1s; }
-        .bet-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #0056b3; }
-        .bet-btn.cashout { background: #28a745; box-shadow: 0 4px 0 #1e7e34; }
+        .input-area { display: none; }
+        input { width: 100%; background: #000; border: 1px solid var(--blue); padding: 15px; color: white; border-radius: 12px; font-size: 18px; box-sizing: border-box; }
 
-        /* ТАБЛИЦА ИГРОКОВ (Кто что ставит) */
-        .players-panel { background: #141419; border-radius: 24px 24px 0 0; flex-grow: 0.8; padding: 15px 16px; overflow-y: auto; border-top: 1px solid #2d2d35; }
-        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1f1f26; }
-        .p-info { display: flex; align-items: center; gap: 10px; }
-        .avatar { width: 32px; height: 32px; border-radius: 50%; background: #2d2d35; border: 1px solid #3d3d45; }
-        .p-name { font-size: 14px; font-weight: 600; }
-        .p-win { font-size: 14px; font-weight: 700; color: #28a745; }
+        /* Main Button */
+        .controls { padding: 20px; }
+        .main-btn { width: 100%; background: var(--blue); border: none; padding: 20px; color: white; border-radius: 18px; font-size: 18px; font-weight: bold; box-shadow: 0 4px #0056b3; }
 
-        /* ЭКРАН ЗАГРУЗКИ */
-        #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .progress-bar { width: 150px; height: 4px; background: #1c1c21; border-radius: 2px; margin-top: 20px; overflow: hidden; }
-        .progress-fill { width: 0%; height: 100%; background: #007bff; transition: 0.1s; }
+        .history { display: flex; gap: 8px; padding: 10px; overflow-x: auto; }
+        .hist-item { background: var(--card); padding: 5px 12px; border-radius: 10px; font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
 
-    <div id="loader">
-        <h2 style="color: #007bff; letter-spacing: 1px;">NFTRocket</h2>
-        <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
+    <div id="loader" style="position:fixed; inset:0; background:black; z-index:1000; display:flex; justify-content:center; align-items:center;">
+        <h1 style="color:var(--blue)">NFT ROCKET</h1>
     </div>
 
     <div class="header">
-        <div class="online">● 131</div>
-        <div class="balance">💎 0.00 <span style="color: #555; margin-left: 5px;">+</span></div>
+        <div class="online">● <span id="onl">131</span></div>
+        <div class="balance-top">💎 <span id="user-bal">10.00</span></div>
     </div>
 
-    <div class="history">
-        <div class="hist-item hist-blue">x1.64</div>
-        <div class="hist-item">1.52</div>
-        <div class="hist-item hist-gold">7.57</div>
-        <div class="hist-item">1.92</div>
-        <div class="hist-item">1.70</div>
-        <div class="hist-item">1.77</div>
-        <div class="hist-item">1.43</div>
-    </div>
+    <div class="history" id="h-list"></div>
 
-    <div class="game-area">
-        <div class="multiplier" id="mult">1.00x</div>
-        <div class="rocket-container" id="r-cont">
-            <img src="https://i.postimg.cc/9F4P5p20/rocket.png" class="rocket-img" id="rocket">
-        </div>
+    <div class="game-zone">
+        <div id="mult" class="multiplier">1.00x</div>
+        <img src="https://i.ibb.co/S7699S6/rocket-ready.png" id="rock" class="rocket">
+        <img src="https://i.ibb.co/5G1X87t/explosion.gif" id="exp" class="explosion">
     </div>
 
     <div class="controls">
-        <button class="bet-btn" id="main-btn" onclick="handleAction()">Сделать ставку</button>
+        <button class="main-btn" onclick="openMenu()">Сделать ставку</button>
     </div>
 
-    <div class="players-panel">
-        <div class="player-row">
-            <div class="p-info"><div class="avatar"></div><div class="p-name">user_931</div></div>
-            <div class="p-win">💎 2.63</div>
+    <div id="menu" class="menu-overlay">
+        <div class="menu-content" id="m-root">
+            <div class="menu-title">Select Asset</div>
+            <button class="option-btn" onclick="showTonInput()">
+                <span>TON Balance</span>
+                <span style="color:var(--blue)">💎 <span id="m-bal">10.00</span></span>
+            </button>
+            <button class="option-btn" onclick="alert('You have no NFTs yet')">
+                <span>NFT Assets</span>
+                <span style="color:#888">0 Items</span>
+            </button>
+            <button style="width:100%; background:none; border:none; color:#555; margin-top:10px;" onclick="closeMenu()">Close</button>
         </div>
-        <div class="player-row">
-            <div class="p-info"><div class="avatar"></div><div class="p-name">13YaRik37</div></div>
-            <div class="p-win">💎 0.82</div>
-        </div>
-        <div class="player-row">
-            <div class="p-info"><div class="avatar"></div><div class="p-name">Glem 28</div></div>
-            <div class="p-win">💎 0.22</div>
+
+        <div class="menu-content input-area" id="m-input">
+            <div class="menu-title">Enter Amount</div>
+            <p style="color:#888; font-size:12px;">Min bet: 0.1 TON</p>
+            <input type="number" id="bet-val" value="0.1" step="0.1" min="0.1">
+            <button class="main-btn" style="margin-top:20px;" onclick="confirmBet()">CONFIRM BET</button>
         </div>
     </div>
 
     <script>
-        // --- ЗАГРУЗКА ---
-        let p = 0;
-        let l = setInterval(() => {
-            p += 4;
-            document.getElementById('fill').style.width = p + '%';
-            if(p >= 100) { clearInterval(l); document.getElementById('loader').style.display='none'; }
-        }, 40);
+        let balance = 10.00;
+        let isPlaying = false;
 
-        // --- ЛОГИКА ИГРЫ ---
-        let flying = false;
-        let m = 1.00;
-        let loop;
-        const btn = document.getElementById('main-btn');
-        const mText = document.getElementById('mult');
-        const rocket = document.getElementById('rocket');
+        // Hide loader
+        setTimeout(() => document.getElementById('loader').style.display='none', 1500);
 
-        function handleAction() {
-            if(!flying) {
-                // СТАРТ
-                flying = true;
-                btn.innerText = 'Забрать';
-                btn.classList.add('cashout');
-                m = 1.00;
-                mText.style.color = 'white';
-
-                // Рандомный краш (здесь будет твой RTP 90% из Python)
-                let crashPoint = (Math.random() * 4 + 1.1).toFixed(2);
-
-                loop = setInterval(() => {
-                    m += 0.01;
-                    mText.innerText = m.toFixed(2) + 'x';
-
-                    // АНИМАЦИЯ: Ракета летит вверх и вправо
-                    let offset = (m - 1) * 30;
-                    rocket.style.transform = `translate(${offset}px, -${offset}px)`;
-
-                    if(m >= crashPoint) {
-                        clearInterval(loop);
-                        mText.innerText = 'КРАШ!';
-                        mText.style.color = '#ff4444';
-                        flying = false;
-                        setTimeout(reset, 2000);
-                    }
-                }, 40);
-            } else {
-                // ЗАБРАТЬ
-                clearInterval(loop);
-                alert('Выигрыш: ' + m.toFixed(2) + 'x');
-                reset();
-            }
+        function openMenu() { document.getElementById('menu').style.display = 'block'; }
+        function closeMenu() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('m-root').style.display = 'block';
+            document.getElementById('m-input').style.display = 'none';
         }
 
-        function reset() {
-            flying = false;
-            btn.innerText = 'Сделать ставку';
-            btn.classList.remove('cashout');
-            mText.innerText = '1.00x';
-            mText.style.color = 'white';
-            rocket.style.transform = 'translate(0,0)';
+        function showTonInput() {
+            document.getElementById('m-root').style.display = 'none';
+            document.getElementById('m-input').style.display = 'block';
+        }
+
+        function confirmBet() {
+            let val = parseFloat(document.getElementById('bet-val').value);
+            if(val < 0.1) return alert('Minimum 0.1 TON');
+            if(val > balance) return alert('Not enough balance');
+
+            balance -= val;
+            updateUI();
+            closeMenu();
+            startGame();
+        }
+
+        function updateUI() {
+            document.getElementById('user-bal').innerText = balance.toFixed(2);
+            document.getElementById('m-bal').innerText = balance.toFixed(2);
+        }
+
+        function startGame() {
+            if(isPlaying) return;
+            isPlaying = true;
+            let m = 1.00;
+            let rock = document.getElementById('rock');
+            let exp = document.getElementById('exp');
+            let mText = document.getElementById('mult');
+
+            exp.style.display = 'none';
+            rock.style.display = 'block';
+
+            // Здесь будет запрос к твоему game_logic.py
+            let crash = (Math.random() * 2.5 + 1.05).toFixed(2);
+
+            let loop = setInterval(() => {
+                m += 0.01;
+                mText.innerText = m.toFixed(2) + 'x';
+                rock.style.transform = `translate(${m*8}px, -${m*12}px) rotate(-15deg)`;
+
+                if(m >= crash) {
+                    clearInterval(loop);
+                    rock.style.display = 'none';
+                    exp.style.display = 'block';
+                    exp.style.transform = rock.style.transform;
+                    mText.innerText = 'BOOM!';
+                    mText.style.color = 'red';
+
+                    let h = document.createElement('div');
+                    h.className = 'hist-item';
+                    h.innerText = 'x'+crash;
+                    document.getElementById('h-list').prepend(h);
+
+                    setTimeout(() => {
+                        isPlaying = false;
+                        mText.innerText = '1.00x';
+                        mText.style.color = 'white';
+                        rock.style.transform = 'none';
+                    }, 3000);
+                }
+            }, 40);
         }
     </script>
 </body>
