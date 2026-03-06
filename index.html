@@ -8,7 +8,6 @@
         :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; }
         body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
 
-        /* ВОЗВРАЩАЕМ ЛОАДЕР */
         #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .bar { width: 150px; height: 4px; background: #1c1c21; border-radius: 2px; margin-top: 20px; overflow: hidden; }
         .fill { width: 0%; height: 100%; background: var(--blue); transition: 0.1s; }
@@ -17,15 +16,14 @@
         .online { color: #28a745; background: rgba(40,167,69,0.1); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
         .balance-top { background: #1c1c21; padding: 6px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #2d2d35; }
 
-        .history { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; }
-        .hist-item { background: #1c1c21; padding: 5px 12px; border-radius: 10px; font-size: 12px; color: #8a8a8e; border: 1px solid #2d2d35; }
+        .history { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; height: 40px; }
+        .hist-item { background: #1c1c21; padding: 5px 12px; border-radius: 10px; font-size: 12px; color: #8a8a8e; border: 1px solid #2d2d35; height: fit-content; }
 
-        .game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .multiplier { font-size: 64px; font-weight: 900; z-index: 10; }
-        .rocket { width: 150px; position: absolute; z-index: 5; }
-        .status-label { color: #555; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
+        .game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding-top: 40px; }
+        .status-label { color: #555; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; z-index: 11; font-size: 14px; }
+        .multiplier { font-size: 72px; font-weight: 900; z-index: 11; margin-top: 0; line-height: 1; }
+        .rocket { width: 160px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; }
 
-        /* MODALS */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; padding: 20px; align-items: center; justify-content: center; }
         .menu-box { background: var(--card); width: 100%; border-radius: 24px; padding: 20px; border: 1px solid #333; }
         .menu-btn { width: 100%; background: #1c1c21; border: 1px solid #333; color: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; text-align: left; display: flex; justify-content: space-between; font-weight: bold; }
@@ -33,9 +31,8 @@
 
         .main-btn { width: 100%; background: var(--blue); border: none; padding: 20px; color: white; border-radius: 18px; font-size: 18px; font-weight: bold; box-shadow: 0 4px #0056b3; }
 
-        /* ТАБЛИЦА СТАВОК */
-        .players-panel { background: var(--card); border-top: 1px solid #2d2d35; border-radius: 24px 24px 0 0; padding: 15px; height: 30vh; overflow-y: auto; }
-        .p-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f1f26; font-size: 14px; }
+        .players-panel { background: var(--card); border-top: 1px solid #2d2d35; border-radius: 24px 24px 0 0; padding: 15px; height: 35vh; overflow-y: auto; }
+        .p-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #1f1f26; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -46,7 +43,7 @@
     </div>
 
     <div class="header">
-        <div class="online">● <span id="online-count">...</span></div>
+        <div class="online">● <span id="online-count">1</span></div>
         <div class="balance-top">💎 <span id="balance-val">10.00</span></div>
     </div>
 
@@ -63,8 +60,7 @@
     </div>
 
     <div class="players-panel" id="bets-table">
-        <div style="text-align:center; color:#555; padding-top:20px;">Загрузка ставок...</div>
-    </div>
+        </div>
 
     <div id="asset-modal" class="modal">
         <div class="menu-box" id="step-1">
@@ -81,31 +77,24 @@
     </div>
 
     <script>
-        // ЛОГИКА ЗАГРУЗКИ
+        const tg = window.Telegram.WebApp;
         let p=0; let lInt = setInterval(()=>{if(p<100){p+=5; document.getElementById('f').style.width=p+'%'} else {clearInterval(lInt); document.getElementById('loader').style.display='none'}}, 50);
 
         let balance = 10.00;
         let currentBet = 0;
         let gameActive = false;
 
-        // ФУНКЦИЯ ПОЛУЧЕНИЯ ДАННЫХ С СЕРВЕРА
-        async function syncWithServer() {
-            try {
-                // В будущем здесь будет твой URL: fetch('https://твой-бот.com/api/status')
-                // Пока имитируем получение общего онлайна и ставок
-                const mockOnline = Math.floor(Math.random() * 10) + 15;
-                document.getElementById('online-count').innerText = mockOnline;
-
-                // Обновление таблицы (имитация)
-                const table = document.getElementById('bets-table');
-                table.innerHTML = `
-                    <div class="p-row"><span>👤 Player_1</span><span style="color:#28a745">💎 1.50</span></div>
-                    <div class="p-row"><span>👤 NFT_Master</span><span style="color:#28a745">💎 0.80</span></div>
-                    <div class="p-row"><span>👤 ${window.Telegram.WebApp.initDataUnsafe.user?.first_name || 'Вы'}</span><span style="color:#28a745">💎 ${currentBet}</span></div>
-                `;
-            } catch (e) { console.log("Ошибка синхронизации"); }
+        // НАСТОЯЩИЙ ОНЛАЙН И СТАВКИ (Заглушка для связи с PyCharm)
+        async function fetchGameData() {
+            // В следующем шаге мы настроим Flask/FastAPI в твоем PyCharm, чтобы этот запрос работал
+            // Пока оставляем логику получения данных
+            const table = document.getElementById('bets-table');
+            // Если ставок нет, пишем это
+            if (currentBet === 0 && table.children.length === 0) {
+                table.innerHTML = '<div style="text-align:center; color:#333; margin-top:20px;">Ставок пока нет</div>';
+            }
         }
-        setInterval(syncWithServer, 3000); // Обновляем данные каждые 3 сек
+        setInterval(fetchGameData, 2000);
 
         function openAssetMenu() { if(!gameActive) document.getElementById('asset-modal').style.display = 'flex'; }
         function closeModal() { document.getElementById('asset-modal').style.display = 'none'; }
@@ -116,6 +105,12 @@
             if(amount > balance) return alert('Недостаточно 💎');
             balance -= amount; currentBet = amount;
             document.getElementById('balance-val').innerText = balance.toFixed(2);
+
+            const table = document.getElementById('bets-table');
+            if(table.innerText === 'Ставок пока нет') table.innerHTML = '';
+
+            table.innerHTML += `<div class="p-row"><span>👤 ${tg.initDataUnsafe.user?.first_name || 'Вы'}</span><span style="color:#28a745">💎 ${amount.toFixed(2)}</span></div>`;
+
             closeModal();
             document.getElementById('bet-trigger').disabled = true;
             document.getElementById('bet-trigger').innerText = `Ставка: ${currentBet} 💎`;
@@ -127,7 +122,8 @@
             let rocket = document.getElementById('rocket');
             let wait = 10;
             gameActive = false;
-            rocket.style.display = 'block'; rocket.style.transform = 'none';
+            rocket.style.display = 'block';
+            rocket.style.top = '50%'; rocket.style.left = '50%'; rocket.style.transform = 'translate(-50%, -50%)';
             mText.innerText = '1.00x'; mText.style.color = 'white';
 
             let countdown = setInterval(() => {
@@ -146,17 +142,24 @@
             let fly = setInterval(() => {
                 m += 0.01;
                 document.getElementById('mult').innerText = m.toFixed(2) + 'x';
-                document.getElementById('rocket').style.transform = `translate(${m*10}px, -${m*15}px) rotate(-15deg)`;
+
+                // Ракета летит из центра вверх-вправо
+                let offX = (m - 1) * 50;
+                let offY = (m - 1) * 70;
+                document.getElementById('rocket').style.transform = `translate(calc(-50% + ${offX}px), calc(-50% - ${offY}px)) rotate(-15deg)`;
 
                 if(m >= crash) {
                     clearInterval(fly);
                     document.getElementById('mult').innerText = 'BOOM!';
                     document.getElementById('mult').style.color = 'red';
+
                     let h = document.createElement('div'); h.className = 'hist-item'; h.innerText = 'x' + crash;
                     document.getElementById('h-bar').prepend(h);
+
                     setTimeout(() => {
                         document.getElementById('bet-trigger').disabled = false;
                         document.getElementById('bet-trigger').innerText = "Сделать ставку";
+                        document.getElementById('bets-table').innerHTML = '';
                         currentBet = 0;
                         document.getElementById('step-1').style.display = 'block';
                         document.getElementById('step-2').style.display = 'none';
