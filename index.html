@@ -60,8 +60,8 @@
         <div id="mult" class="multiplier">1.00x</div>
 
         <div class="rocket-container" id="r-container">
-            <img src="https://i.ibb.co/60V0G5b/rocket-fly.gif" id="rocket" class="rocket-img">
-            <img src="https://i.ibb.co/1K5Vj11/explosion.gif" id="explosion" class="explosion-img">
+            <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3N5Ym5iZzR0YXJwdWpxbm5hMGF6ZHFwdWlrcW95cW95cW95cW95JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1z/h8S9D6yFpAnLp0S1Y9/giphy.gif" id="rocket" class="rocket-img">
+            <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXFid3Y4eHh3eHh3eHh3eHh3eHh3eHh3eHh3eHh3eHh3JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/XUFPGrX5Zis6Y/giphy.gif" id="explosion" class="explosion-img">
         </div>
     </div>
 
@@ -145,12 +145,9 @@
         function gameLoop() {
             let status = document.getElementById('game-status');
             let mText = document.getElementById('mult');
-
-            // Получаем элементы ракеты и контейнера
             let rocketContainer = document.getElementById('r-container');
             let rocketFly = document.getElementById('rocket');
             let explosion = document.getElementById('explosion');
-
             let btn = document.getElementById('bet-trigger');
             let wait = 10;
 
@@ -158,11 +155,9 @@
             isFlying = false;
             currentMultiplier = 1.00;
 
-            // Сбрасываем вид: показываем ракету, прячем взрыв
+            // СБРОС ВИЗУАЛА (Важно!)
             rocketFly.style.display = 'block';
             explosion.style.display = 'none';
-
-            // Сбрасываем позицию контейнера в центр
             rocketContainer.style.transition = 'none';
             rocketContainer.style.transform = 'translate(-50%, -50%) rotate(0deg)';
 
@@ -193,8 +188,6 @@
 
             let m = 1.00;
             let crash = (Math.random() * 2.5 + 1.1).toFixed(2);
-
-            // Включаем плавную анимацию для контейнера
             rocketContainer.style.transition = '0.1s linear';
 
             let fly = setInterval(() => {
@@ -206,8 +199,7 @@
                     btn.innerText = `ЗАБРАТЬ ${(currentBet * m).toFixed(2)}`;
                 }
 
-                // Двигаем весь КОНТЕЙНЕР из центра вверх-вправо
-                let offX = (m - 1) * 70; // Немного увеличил дальность
+                let offX = (m - 1) * 70;
                 let offY = (m - 1) * 90;
                 rocketContainer.style.transform = `translate(calc(-50% + ${offX}px), calc(-50% - ${offY}px)) rotate(-15deg)`;
 
@@ -217,10 +209,9 @@
                     document.getElementById('mult').innerText = 'BOOM!';
                     document.getElementById('mult').style.color = 'red';
 
-                    // --- ЛОГИКА ВЗРЫВА ---
-                    rocketFly.style.display = 'none'; // Прячем летящую ракету
-                    explosion.style.display = 'block'; // Показываем взрыв
-                    // -----------------------
+                    // Анимация взрыва
+                    rocketFly.style.display = 'none';
+                    explosion.style.display = 'block';
 
                     if (currentBet > 0 && !hasCashedOut) {
                         updateTable('BOOM', 'color:#ff4444');
