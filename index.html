@@ -8,6 +8,11 @@
         :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; }
         body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
 
+        /* ВОЗВРАЩАЕМ ЛОАДЕР */
+        #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .bar { width: 150px; height: 4px; background: #1c1c21; border-radius: 2px; margin-top: 20px; overflow: hidden; }
+        .fill { width: 0%; height: 100%; background: var(--blue); transition: 0.1s; }
+
         .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
         .online { color: #28a745; background: rgba(40,167,69,0.1); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
         .balance-top { background: #1c1c21; padding: 6px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #2d2d35; }
@@ -18,25 +23,30 @@
         .game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .multiplier { font-size: 64px; font-weight: 900; z-index: 10; }
         .rocket { width: 150px; position: absolute; z-index: 5; }
-        .status-label { color: #555; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .status-label { color: #555; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
 
-        /* MODAL / MENU */
+        /* MODALS */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; padding: 20px; align-items: center; justify-content: center; }
         .menu-box { background: var(--card); width: 100%; border-radius: 24px; padding: 20px; border: 1px solid #333; }
         .menu-btn { width: 100%; background: #1c1c21; border: 1px solid #333; color: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; text-align: left; display: flex; justify-content: space-between; font-weight: bold; }
         .input-bet { width: 100%; background: #000; border: 1px solid var(--blue); color: white; padding: 15px; border-radius: 12px; margin: 15px 0; font-size: 18px; box-sizing: border-box; }
 
         .main-btn { width: 100%; background: var(--blue); border: none; padding: 20px; color: white; border-radius: 18px; font-size: 18px; font-weight: bold; box-shadow: 0 4px #0056b3; }
-        .main-btn:disabled { background: #333; box-shadow: none; color: #666; }
 
+        /* ТАБЛИЦА СТАВОК */
         .players-panel { background: var(--card); border-top: 1px solid #2d2d35; border-radius: 24px 24px 0 0; padding: 15px; height: 30vh; overflow-y: auto; }
         .p-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f1f26; font-size: 14px; }
     </style>
 </head>
 <body>
 
+    <div id="loader">
+        <h2 style="color:var(--blue)">NFT ROCKET</h2>
+        <div class="bar"><div class="fill" id="f"></div></div>
+    </div>
+
     <div class="header">
-        <div class="online">● <span id="online-count">1</span></div>
+        <div class="online">● <span id="online-count">...</span></div>
         <div class="balance-top">💎 <span id="balance-val">10.00</span></div>
     </div>
 
@@ -52,25 +62,17 @@
         <button class="main-btn" id="bet-trigger" onclick="openAssetMenu()">Сделать ставку</button>
     </div>
 
-    <div class="players-panel">
-        <div class="p-row"><span>👤 user_931</span><span style="color:#28a745">💎 2.63</span></div>
-        <div class="p-row"><span>👤 Евгений</span><span style="color:#28a745">💎 0.47</span></div>
+    <div class="players-panel" id="bets-table">
+        <div style="text-align:center; color:#555; padding-top:20px;">Загрузка ставок...</div>
     </div>
 
     <div id="asset-modal" class="modal">
         <div class="menu-box" id="step-1">
             <h3 style="text-align:center">Выберите ассет</h3>
-            <div class="menu-btn" onclick="showBetInput()">
-                <span>TON Balance</span>
-                <span style="color:var(--blue)">💎</span>
-            </div>
-            <div class="menu-btn" onclick="alert('NFT не найдены')">
-                <span>NFT Assets</span>
-                <span>🎁</span>
-            </div>
+            <div class="menu-btn" onclick="showBetInput()"><span>TON Balance</span><span style="color:var(--blue)">💎</span></div>
+            <div class="menu-btn" onclick="alert('NFT не найдены')"><span>NFT Assets</span><span>🎁</span></div>
             <button onclick="closeModal()" style="width:100%; background:none; border:none; color:#555; margin-top:10px;">Отмена</button>
         </div>
-
         <div class="menu-box" id="step-2" style="display:none">
             <h3 style="text-align:center">Сумма ставки</h3>
             <input type="number" id="bet-amount" class="input-bet" value="0.1" step="0.1" min="0.1">
@@ -79,29 +81,40 @@
     </div>
 
     <script>
+        // ЛОГИКА ЗАГРУЗКИ
+        let p=0; let lInt = setInterval(()=>{if(p<100){p+=5; document.getElementById('f').style.width=p+'%'} else {clearInterval(lInt); document.getElementById('loader').style.display='none'}}, 50);
+
         let balance = 10.00;
         let currentBet = 0;
         let gameActive = false;
-        let timerSeconds = 10;
 
-        function openAssetMenu() {
-            if(gameActive) return;
-            document.getElementById('asset-modal').style.display = 'flex';
+        // ФУНКЦИЯ ПОЛУЧЕНИЯ ДАННЫХ С СЕРВЕРА
+        async function syncWithServer() {
+            try {
+                // В будущем здесь будет твой URL: fetch('https://твой-бот.com/api/status')
+                // Пока имитируем получение общего онлайна и ставок
+                const mockOnline = Math.floor(Math.random() * 10) + 15;
+                document.getElementById('online-count').innerText = mockOnline;
+
+                // Обновление таблицы (имитация)
+                const table = document.getElementById('bets-table');
+                table.innerHTML = `
+                    <div class="p-row"><span>👤 Player_1</span><span style="color:#28a745">💎 1.50</span></div>
+                    <div class="p-row"><span>👤 NFT_Master</span><span style="color:#28a745">💎 0.80</span></div>
+                    <div class="p-row"><span>👤 ${window.Telegram.WebApp.initDataUnsafe.user?.first_name || 'Вы'}</span><span style="color:#28a745">💎 ${currentBet}</span></div>
+                `;
+            } catch (e) { console.log("Ошибка синхронизации"); }
         }
+        setInterval(syncWithServer, 3000); // Обновляем данные каждые 3 сек
+
+        function openAssetMenu() { if(!gameActive) document.getElementById('asset-modal').style.display = 'flex'; }
         function closeModal() { document.getElementById('asset-modal').style.display = 'none'; }
-
-        function showBetInput() {
-            document.getElementById('step-1').style.display = 'none';
-            document.getElementById('step-2').style.display = 'block';
-        }
+        function showBetInput() { document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'block'; }
 
         function confirmBet() {
             let amount = parseFloat(document.getElementById('bet-amount').value);
             if(amount > balance) return alert('Недостаточно 💎');
-            if(amount < 0.1) return alert('Минимум 0.1');
-
-            currentBet = amount;
-            balance -= amount;
+            balance -= amount; currentBet = amount;
             document.getElementById('balance-val').innerText = balance.toFixed(2);
             closeModal();
             document.getElementById('bet-trigger').disabled = true;
@@ -111,34 +124,24 @@
         function gameLoop() {
             let status = document.getElementById('game-status');
             let mText = document.getElementById('mult');
-            let btn = document.getElementById('bet-trigger');
             let rocket = document.getElementById('rocket');
-
-            // 1. Фаза ожидания (10 сек)
             let wait = 10;
             gameActive = false;
-            rocket.style.display = 'block';
-            rocket.style.transform = 'none';
-            mText.innerText = '1.00x';
-            mText.style.color = 'white';
+            rocket.style.display = 'block'; rocket.style.transform = 'none';
+            mText.innerText = '1.00x'; mText.style.color = 'white';
 
             let countdown = setInterval(() => {
                 status.innerText = `Старт через: ${wait}с`;
                 wait--;
-                if(wait < 0) {
-                    clearInterval(countdown);
-                    startFlight();
-                }
+                if(wait < 0) { clearInterval(countdown); startFlight(); }
             }, 1000);
         }
 
         function startFlight() {
             gameActive = true;
             document.getElementById('game-status').innerText = "ПОЛЕТ!";
-            document.getElementById('bet-trigger').disabled = true;
-
             let m = 1.00;
-            let crash = (Math.random() * 2 + 1.1).toFixed(2); // Тот самый скрипт
+            let crash = (Math.random() * 2 + 1.1).toFixed(2);
 
             let fly = setInterval(() => {
                 m += 0.01;
@@ -149,16 +152,12 @@
                     clearInterval(fly);
                     document.getElementById('mult').innerText = 'BOOM!';
                     document.getElementById('mult').style.color = 'red';
-
-                    // Обновляем историю
-                    let h = document.createElement('div');
-                    h.className = 'hist-item';
-                    h.innerText = 'x' + crash;
+                    let h = document.createElement('div'); h.className = 'hist-item'; h.innerText = 'x' + crash;
                     document.getElementById('h-bar').prepend(h);
-
                     setTimeout(() => {
                         document.getElementById('bet-trigger').disabled = false;
                         document.getElementById('bet-trigger').innerText = "Сделать ставку";
+                        currentBet = 0;
                         document.getElementById('step-1').style.display = 'block';
                         document.getElementById('step-2').style.display = 'none';
                         gameLoop();
@@ -166,7 +165,6 @@
                 }
             }, 40);
         }
-
         gameLoop();
     </script>
 </body>
