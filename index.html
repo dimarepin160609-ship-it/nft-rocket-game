@@ -3,62 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFTRocket Pro</title>
+    <title>NFTRocket Pro Multiplayer</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --blue: #0088cc; --bg: #0b0b0e; --green: #2ecc71; }
+        :root { --blue: #0088cc; --bg: #0b0b0e; --green: #2ecc71; --red: #e74c3c; }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* ВЕРХНЯЯ ПАНЕЛЬ (как на скриншоте) */
+        /* КЛАССНЫЙ ЛОАДЕР ПРИ ВХОДЕ */
+        #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+        #loader h2 { font-size: 32px; letter-spacing: 5px; font-weight: 900; background: linear-gradient(90deg, #fff, var(--blue), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 2s infinite linear; }
+        @keyframes shine { 0% { background-position: -200px; } 100% { background-position: 200px; } }
+        .progress-bar { width: 200px; height: 3px; background: #1c1c21; border-radius: 10px; margin-top: 20px; overflow: hidden; }
+        #f-line { width: 0%; height: 100%; background: var(--blue); box-shadow: 0 0 15px var(--blue); }
+
+        /* ХЕДЕР */
         .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
         .online-badge { background: rgba(46, 204, 113, 0.15); color: var(--green); padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; }
         .balance-badge { background: #1c1c21; padding: 5px 12px; border-radius: 50px; font-weight: bold; border: 1px solid #333; }
 
-        /* ИСТОРИЯ (как на скриншоте) */
-        .history-row { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; }
+        /* ИСТОРИЯ КОЭФФИЦИЕНТОВ */
+        .history-row { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; scrollbar-width: none; }
         .history-item { background: #1c1c21; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: bold; border: 1px solid #222; }
-        .h-blue { background: var(--blue); }
 
-        /* ЦЕНТР */
+        /* ИГРОВАЯ ЗОНА */
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #mult { font-size: 80px; font-weight: 900; z-index: 10; margin: 0; }
+        #mult { font-size: 80px; font-weight: 900; z-index: 10; margin: 0; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
         #rocket { width: 150px; position: absolute; z-index: 5; transition: transform 0.1s linear; }
 
-        /* КНОПКА (Градиент как на скриншоте) */
-        .btn-area { padding: 15px; }
-        #bet-trigger { 
+        /* ВЫБОР СТАВКИ */
+        .bet-selector { display: flex; justify-content: space-between; gap: 8px; padding: 0 15px; margin-bottom: 10px; }
+        .bet-option { flex: 1; background: #1c1c21; border: 1px solid #333; color: white; padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .bet-option.selected { border-color: var(--blue); background: rgba(0, 136, 204, 0.1); }
+        .bet-option:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ГЛАВНАЯ КНОПКА */
+        .btn-area { padding: 0 15px 15px 15px; }
+        #bet-trigger {
             background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%);
             color: white; border: none; padding: 18px; border-radius: 20px;
             font-size: 18px; font-weight: bold; width: 100%; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 102, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 102, 255, 0.3); transition: 0.2s;
         }
-        #bet-trigger.win { background: var(--green); }
+        #bet-trigger.win { background: var(--green); box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
         #bet-trigger:disabled { background: #222; opacity: 0.5; box-shadow: none; }
 
-        /* НИЖНЯЯ ПАНЕЛЬ (как на скриншоте) */
+        /* НАВИГАЦИЯ */
         .nav-bar { background: #141419; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #1c1c21; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #555; font-size: 10px; }
         .nav-item.active { color: var(--blue); }
     </style>
 </head>
 <body>
+
+    <div id="loader">
+        <h2>NFTROCKET</h2>
+        <div class="progress-bar"><div id="f-line"></div></div>
+    </div>
+
     <div class="header">
-        <div class="online-badge">👤 <span id="online-val">1</span></div>
+        <div class="online-badge">👤 <span id="online-val">..</span> ONLINE</div>
         <div class="balance-badge">💎 <span id="balance-val">10.00</span></div>
     </div>
 
     <div class="history-row">
-        <div class="history-item h-blue">Ожидание</div>
-        <div class="history-item" style="color:var(--green)">1.17</div>
-        <div class="history-item" style="color:#9b59b6">1.51</div>
-        <div class="history-item" style="color:var(--green)">4.61</div>
+        <div class="history-item" style="background:var(--blue)">Ожидание</div>
+        <div class="history-item" style="color:var(--green)">1.45x</div>
+        <div class="history-item" style="color:#9b59b6">2.10x</div>
+        <div class="history-item" style="color:var(--green)">1.12x</div>
     </div>
 
     <div id="game-zone">
         <h1 id="mult">1.00x</h1>
         <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
+    </div>
+
+    <div class="bet-selector" id="bet-options">
+        <button class="bet-option selected" onclick="setBet(0.1)">0.1</button>
+        <button class="bet-option" onclick="setBet(0.5)">0.5</button>
+        <button class="bet-option" onclick="setBet(1.0)">1.0</button>
+        <button class="bet-option" onclick="setBet(5.0)">5.0</button>
     </div>
 
     <div class="btn-area">
@@ -73,69 +98,118 @@
     </div>
 
     <script>
-        // ИНИЦИАЛИЗАЦИЯ ИЗ ТВОЕГО PYCHARM
         const firebaseConfig = { databaseURL: "https://nftrocket-cb448-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const userId = tg.initDataUnsafe.user?.id || "id_" + Math.random().toString(36).substr(2, 5);
         const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
         let balance = 10.00;
+        let selectedAmount = 0.1;
         let currentBet = 0;
         let hasCashedOut = false;
         let gameStatus = "waiting";
+        let serverMultiplier = 1.00;
 
-        // ОНЛАЙН СИСТЕМА
-        const onlineRef = db.ref('online/' + userName);
+        // Онлайн
+        const onlineRef = db.ref('online/' + userId);
         onlineRef.set(true); onlineRef.onDisconnect().remove();
         db.ref('online').on('value', (s) => { document.getElementById('online-val').innerText = s.numChildren(); });
 
-        // ЛОГИКА СЕРВЕРА
+        // Выбор суммы
+        function setBet(amt) {
+            if (gameStatus !== "waiting" || currentBet > 0) return;
+            selectedAmount = amt;
+            document.querySelectorAll('.bet-option').forEach(btn => {
+                btn.classList.remove('selected');
+                if (parseFloat(btn.innerText) === amt) btn.classList.add('selected');
+            });
+        }
+
+        // Логика игры
         db.ref('game').on('value', (snap) => {
             const data = snap.val(); if(!data) return;
             gameStatus = data.status;
+            serverMultiplier = data.multiplier;
             document.getElementById('mult').innerText = data.multiplier.toFixed(2) + "x";
-            
+
             const btn = document.getElementById('bet-trigger');
             const rocket = document.getElementById('rocket');
+            const optBtns = document.querySelectorAll('.bet-option');
 
             if(data.status === "waiting") {
-                btn.disabled = false; btn.innerText = "Сделать ставку";
-                btn.className = ""; rocket.style.transform = "translate(0,0)";
+                btn.disabled = false;
+                if (currentBet === 0) {
+                    btn.innerText = "Сделать ставку";
+                    btn.className = "";
+                    optBtns.forEach(b => b.disabled = false);
+                }
+                rocket.style.transform = "translate(0,0)";
+                document.getElementById('mult').style.color = "white";
             } else if(data.status === "flying") {
+                optBtns.forEach(b => b.disabled = true);
                 let off = (data.multiplier - 1) * 40;
                 rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
+
                 if(currentBet > 0 && !hasCashedOut) {
+                    btn.disabled = false;
                     btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
                     btn.classList.add('win');
                 }
             } else if(data.status === "crash") {
-                document.getElementById('mult').style.color = "#e74c3c";
+                optBtns.forEach(b => b.disabled = true);
+                document.getElementById('mult').style.color = "var(--red)";
                 btn.disabled = true; btn.innerText = "БУМ!";
-                setTimeout(() => { 
-                    currentBet = 0; hasCashedOut = false; 
-                    document.getElementById('mult').style.color = "white";
+                setTimeout(() => {
+                    currentBet = 0; hasCashedOut = false;
                 }, 2000);
             }
         });
 
         function handleMainAction() {
-            if(gameStatus === "waiting") {
-                currentBet = 1.0;
-                db.ref('bets/' + userName).set({ name: userName, status: "playing" });
-                document.getElementById('bet-trigger').disabled = true;
-                document.getElementById('bet-trigger').innerText = "СТАВКА ПРИНЯТА";
-            } else if(gameStatus === "flying" && currentBet > 0) {
-                hasCashedOut = true;
-                balance += (currentBet * parseFloat(document.getElementById('mult').innerText));
+            const btn = document.getElementById('bet-trigger');
+            if(gameStatus === "waiting" && currentBet === 0) {
+                if (balance < selectedAmount) {
+                    tg.showAlert("Недостаточно баланса!");
+                    return;
+                }
+                currentBet = selectedAmount;
+                balance -= currentBet;
                 document.getElementById('balance-val').innerText = balance.toFixed(2);
-                db.ref('bets/' + userName).update({ status: "win" });
-                document.getElementById('bet-trigger').disabled = true;
-                document.getElementById('bet-trigger').innerText = "ВЫ ПРИНЯЛИ!";
-                document.getElementById('bet-trigger').className = "";
+
+                db.ref('bets/' + userId).set({ name: userName, amount: currentBet, status: "playing" });
+                btn.disabled = true;
+                btn.innerText = "ОЖИДАЕМ ВЗЛЕТА";
+            } else if(gameStatus === "flying" && currentBet > 0 && !hasCashedOut) {
+                hasCashedOut = true;
+                let win = currentBet * serverMultiplier;
+                balance += win;
+                document.getElementById('balance-val').innerText = balance.toFixed(2);
+                db.ref('bets/' + userId).update({ status: "win", out: serverMultiplier.toFixed(2) });
+                btn.disabled = true;
+                btn.innerText = "ВЫ ПРИНЯЛИ!";
+                btn.classList.remove('win');
+                btn.style.background = "#222";
             }
         }
+
+        // Анимация лоадера
+        let p = 0;
+        let load = setInterval(() => {
+            p += Math.random() * 20;
+            if (p > 100) p = 100;
+            document.getElementById('f-line').style.width = p + '%';
+            if (p === 100) {
+                clearInterval(load);
+                setTimeout(() => {
+                    document.getElementById('loader').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+                }, 400);
+            }
+        }, 150);
     </script>
 </body>
 </html>
-
