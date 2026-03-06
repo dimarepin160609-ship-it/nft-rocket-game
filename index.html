@@ -1,48 +1,71 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFTRocket Multiplayer</title>
+    <title>NFTRocket Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; --green: #28a745; --red: #ff4444; }
-        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        :root { --blue: #0088cc; --bg: #050507; --card: rgba(20, 20, 25, 0.8); --green: #2ecc71; --red: #e74c3c; }
 
-        /* КЛАССНЫЙ ЛОАДЕР */
-        #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #loader h2 { font-size: 28px; letter-spacing: 4px; margin: 0; background: linear-gradient(90deg, #fff, var(--blue), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 2s infinite linear; }
-        @keyframes shine { 0% { background-position: -100px; } 100% { background-position: 100px; } }
-        .bar { width: 200px; height: 2px; background: #1c1c21; border-radius: 10px; margin-top: 15px; overflow: hidden; }
-        #f { width: 0%; height: 100%; background: var(--blue); box-shadow: 0 0 10px var(--blue); }
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050507 100%);
+            color: white; font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh;
+        }
 
-        .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; z-index: 10; }
-        #online-tag { background: rgba(40, 167, 69, 0.1); border: 1px solid var(--green); color: var(--green); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        #balance-top { font-weight: bold; font-size: 16px; }
+        /* ЛОАДЕР NFTRocket */
+        #loader { position: fixed; inset: 0; background: #050507; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #loader h2 { font-size: 32px; letter-spacing: 6px; margin: 0; font-weight: 900; color: #fff; text-shadow: 0 0 15px var(--blue); }
+        .bar { width: 220px; height: 3px; background: #1c1c21; border-radius: 10px; margin-top: 20px; overflow: hidden; }
+        #f { width: 0%; height: 100%; background: var(--blue); box-shadow: 0 0 20px var(--blue); }
 
-        #game-status { color: #555; font-weight: bold; text-transform: uppercase; font-size: 12px; text-align: center; margin-top: 5px; letter-spacing: 1px; }
+        .header { display: flex; justify-content: space-between; padding: 20px; align-items: center; position: relative; z-index: 10; }
+        #online-tag {
+            background: rgba(46, 204, 113, 0.1); border: 1px solid var(--green); color: var(--green);
+            padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: 800; letter-spacing: 1px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-        #game-zone { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        #mult { font-size: 80px; font-weight: 900; z-index: 11; position: relative; }
+        #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #game-status { font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+        #mult { font-size: 90px; font-weight: 900; margin: 0; text-shadow: 0 0 30px rgba(0,0,0,0.8); position: relative; z-index: 12; }
 
         /* РАКЕТА */
-        #r-container { width: 150px; height: 150px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; transition: 0.1s linear; }
-        #rocket { width: 100%; }
-        #explosion { width: 100%; display: none; }
+        #r-container { width: 140px; height: 140px; position: absolute; z-index: 5; transition: transform 0.1s linear; }
+        #rocket { width: 100%; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        #explosion { width: 120%; display: none; }
 
-        /* ТАБЛИЦА СТАВОК */
-        .leaderboard { background: var(--card); border-radius: 20px 20px 0 0; padding: 15px; flex-shrink: 0; max-height: 250px; overflow-y: auto; border-top: 1px solid #222; }
-        .p-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1c1c21; }
-        .p-name { font-weight: bold; font-size: 14px; display: flex; flex-direction: column; }
-        .p-status-sub { font-size: 10px; text-transform: uppercase; margin-top: 2px; }
-        .status-win { color: var(--green); }
-        .status-play { color: var(--blue); }
-        .status-lose { color: var(--red); }
+        /* ЛИДЕРБОРД */
+        .leaderboard {
+            background: var(--card); backdrop-filter: blur(15px); border-radius: 25px 25px 0 0;
+            padding: 20px; height: 200px; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .p-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .p-info { display: flex; align-items: center; gap: 10px; }
+        .p-avatar { width: 32px; height: 32px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .p-details { display: flex; flex-direction: column; }
+        .p-name { font-size: 14px; font-weight: 600; color: #eee; }
+        .p-status { font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
-        #bet-trigger { background: var(--blue); color: white; border: none; padding: 20px; font-size: 18px; font-weight: 900; cursor: pointer; border-radius: 0; }
-        #bet-trigger:disabled { background: #2d2d35; color: #555; }
+        /* ЦВЕТА СТАТУСОВ */
+        .st-playing { color: var(--blue); }
+        .st-win { color: var(--green); }
+        .st-lose { color: var(--red); }
+
+        /* КНОПКА СТАВКИ */
+        #bet-trigger {
+            background: var(--blue); color: white; border: none; padding: 22px;
+            font-size: 18px; font-weight: 800; width: 100%; cursor: pointer; transition: 0.3s;
+        }
+        #bet-trigger:disabled { background: #1a1a1f; color: #444; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -56,9 +79,8 @@
         <div id="balance-top">💎 <span id="balance-val">10.00</span></div>
     </div>
 
-    <div id="game-status">ПОДКЛЮЧЕНИЕ К СЕТИ...</div>
-
     <div id="game-zone">
+        <div id="game-status">Ожидание...</div>
         <h1 id="mult">1.00x</h1>
         <div id="r-container">
             <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
@@ -66,9 +88,7 @@
         </div>
     </div>
 
-    <div class="leaderboard" id="bets-table">
-        </div>
-
+    <div class="leaderboard" id="bets-table"></div>
     <button id="bet-trigger" onclick="handleMainAction()">СДЕЛАТЬ СТАВКУ</button>
 
     <script>
@@ -76,6 +96,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const tg = window.Telegram.WebApp;
+        tg.expand();
         const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
         let balance = 10.00;
@@ -84,13 +105,13 @@
         let serverMultiplier = 1.00;
         let gameStatus = "waiting";
 
-        // ЛОГИКА ОНЛАЙНА
+        // ОНЛАЙН СИСТЕМА
         const onlineRef = db.ref('online/' + userName);
         onlineRef.set(true);
         onlineRef.onDisconnect().remove();
         db.ref('online').on('value', (s) => { document.getElementById('online-val').innerText = s.numChildren() || 1; });
 
-        // СЛУШАЕМ СЕРВЕР
+        // СЛУШАЕМ СЕРВЕР (ИЗ СКРИНШОТОВ image_8be5c5.png и image_8c4ba4.png)
         db.ref('game').on('value', (snapshot) => {
             const data = snapshot.val();
             if(!data) return;
@@ -106,7 +127,7 @@
             const rContainer = document.getElementById('r-container');
 
             if(data.status === "waiting") {
-                sLabel.innerText = `ДО ВЗЛЕТА: ${data.wait}с`;
+                sLabel.innerText = `До старта: ${data.wait}с`;
                 mText.innerText = "1.00x";
                 mText.style.color = "white";
                 rocket.style.display = 'block';
@@ -115,62 +136,60 @@
                 if(!currentBet) {
                     btn.disabled = false;
                     btn.innerText = "СДЕЛАТЬ СТАВКУ";
-                    btn.style.background = "#007bff";
+                    btn.style.background = "#0088cc";
                 }
             }
 
             if(data.status === "flying") {
-                sLabel.innerText = "ОЖИДАНИЕ КРАША...";
+                sLabel.innerText = "Ракета летит!";
                 mText.innerText = data.multiplier.toFixed(2) + "x";
-                let off = (data.multiplier - 1) * 40;
+                let off = (data.multiplier - 1) * 45;
                 rContainer.style.transform = `translate(calc(-50% + ${off}px), calc(-50% - ${off}px)) rotate(-15deg)`;
 
                 if(currentBet > 0 && !hasCashedOut) {
                     btn.disabled = false;
                     btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
-                    btn.style.background = "#28a745";
+                    btn.style.background = "#2ecc71";
                 }
             }
 
             if(data.status === "crash") {
                 mText.innerText = "BOOM!";
-                mText.style.color = "#ff4444";
+                mText.style.color = var(--red);
                 rocket.style.display = 'none';
                 explosion.style.display = 'block';
 
-                // Если не успел забрать - в базе пишем BOOM
                 if(currentBet > 0 && !hasCashedOut) {
                     db.ref('bets/' + userName).update({ status: "lose" });
                     btn.disabled = true;
-                    btn.innerText = "СГОРЕЛО";
+                    btn.innerText = "ВЗОРВАЛОСЬ";
                 }
-
-                setTimeout(() => {
-                    currentBet = 0;
-                    hasCashedOut = false;
-                }, 2000);
+                setTimeout(() => { currentBet = 0; hasCashedOut = false; }, 2000);
             }
         });
 
-        // ЛИДЕРБОРД
+        // ЛИДЕРБОРД С НОВЫМ ДИЗАЙНОМ
         db.ref('bets').on('value', (snapshot) => {
             const bets = snapshot.val();
             const table = document.getElementById('bets-table');
             table.innerHTML = "";
             if(bets) {
-                Object.values(bets).forEach(b => {
-                    let statusHtml = "";
-                    if(b.status === "win") statusHtml = `<span class="p-status-sub status-win">ВЫИГРЫШ ${b.out}x</span>`;
-                    else if(b.status === "lose") statusHtml = `<span class="p-status-sub status-lose">БУМ</span>`;
-                    else statusHtml = `<span class="p-status-sub status-play">В ИГРЕ...</span>`;
+                Object.values(bets).reverse().forEach(b => {
+                    let stClass = "st-playing";
+                    let stText = "В игре...";
+                    if(b.status === "win") { stClass = "st-win"; stText = `Вывел x${b.out}`; }
+                    if(b.status === "lose") { stClass = "st-lose"; stText = "Бум"; }
 
                     table.innerHTML += `
                         <div class="p-row">
-                            <div class="p-name">
-                                <span>👤 ${b.name}</span>
-                                ${statusHtml}
+                            <div class="p-info">
+                                <div class="p-avatar">${b.name[0]}</div>
+                                <div class="p-details">
+                                    <span class="p-name">${b.name}</span>
+                                    <span class="p-status ${stClass}">${stText}</span>
+                                </div>
                             </div>
-                            <div style="font-weight:bold">${b.amount} 💎</div>
+                            <div style="font-weight:900; color:#fff">${b.amount} 💎</div>
                         </div>`;
                 });
             }
@@ -181,28 +200,29 @@
                 currentBet = 1.0;
                 db.ref('bets/' + userName).set({ name: userName, amount: 1.0, status: "playing" });
                 document.getElementById('bet-trigger').disabled = true;
-                document.getElementById('bet-trigger').innerText = "ОЖИДАЕМ ВЗЛЕТА";
+                document.getElementById('bet-trigger').innerText = "СТАВКА ПРИНЯТА";
             } else if(gameStatus === "flying" && currentBet > 0) {
                 hasCashedOut = true;
                 let win = currentBet * serverMultiplier;
                 balance += win;
                 document.getElementById('balance-val').innerText = balance.toFixed(2);
                 db.ref('bets/' + userName).update({ status: "win", out: serverMultiplier.toFixed(2) });
-                document.getElementById('bet-trigger').innerText = "УСПЕШНО!";
+                document.getElementById('bet-trigger').innerText = "ВЫ ПРИНЯЛИ!";
+                document.getElementById('bet-trigger').style.background = "#1a1a1f";
                 document.getElementById('bet-trigger').disabled = true;
             }
         }
 
-        // КЛАССНЫЙ ЛОАДЕР
+        // КЛАССНЫЙ ЛОАДЕР (ИЗ ТВОЕГО КОДА)
         let p=0;
         let interval = setInterval(() => {
             p += 2;
             document.getElementById('f').style.width = p + '%';
             if(p >= 100) {
                 clearInterval(interval);
-                setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+                setTimeout(() => document.getElementById('loader').style.display = 'none', 600);
             }
-        }, 30);
+        }, 25);
     </script>
 </body>
 </html>
