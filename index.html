@@ -84,15 +84,130 @@
     <div id="bets-list"></div>
 </div>
 
+<style>
+    /* Новая панель ввода ставки */
+    .bet-input-container {
+        display: flex;
+        align-items: center;
+        background: #0b0b0e;
+        border: 1px solid #333;
+        border-radius: 15px;
+        margin-bottom: 15px;
+        padding: 5px;
+    }
+    .bet-control-btn {
+        background: #1c1c21;
+        border: none;
+        color: white;
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    #bet-amount-input {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        color: white;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        outline: none;
+    }
+    .input-label {
+        color: #555;
+        font-size: 12px;
+        margin-right: 10px;
+        font-weight: bold;
+    }
+</style>
+
 <div class="controls">
-    <div class="bet-selector">
-        <button class="bet-option selected" onclick="setBet(0.1)">0.1</button>
-        <button class="bet-option" onclick="setBet(0.5)">0.5</button>
-        <button class="bet-option" onclick="setBet(1.0)">1.0</button>
-        <button class="bet-option" onclick="setBet(5.0)">5.0</button>
+    <div class="bet-input-container">
+        <button class="bet-control-btn" onclick="adjustBet(-0.1)">−</button>
+        <input type="number" id="bet-amount-input" value="0.1" step="0.1" min="0.1" onchange="validateBet()">
+        <span class="input-label">TON</span>
+        <button class="bet-control-btn" onclick="adjustBet(0.1)">+</button>
     </div>
     <button id="bet-trigger" onclick="handleMainAction()">Сделать ставку</button>
 </div>
+
+<script>
+    // Функция регулировки кнопками +/-
+    function adjustBet(delta) {
+        if(gameStatus !== "waiting" || currentBet > 0) return;
+        let input = document.getElementById('bet-amount-input');
+        let newVal = parseFloat(input.value) + delta;
+        if(newVal < 0.1) newVal = 0.1;
+        input.value = newVal.toFixed(1);
+        selectedAmount = parseFloat(input.value);
+    }
+
+    // Проверка ручного ввода (кратность 0.1)
+    function validateBet() {
+        let input = document.getElementById('bet-amount-input');
+        let val = parseFloat(input.value);
+        
+        if(isNaN(val) || val < 0.1) val = 0.1;
+        
+        // Магия кратности 0.1
+        val = Math.round(val * 10) / 10; 
+        
+        input.value = val.toFixed(1);
+        selectedAmount = val;
+    }
+
+    // Обнови функцию handleMainAction, чтобы она брала значение из инпута
+    function handleMainAction() {
+        const btn = document.getElementById('bet-trigger');
+        const inputField = document.getElementById('bet-amount-input');
+        
+        if(gameStatus === "waiting" && currentBet === 0) {
+            validateBet(); // На всякий случай проверяем перед ставкой
+            
+            if(balance < selectedAmount) {
+                tg.showAlert("Недостаточно баланса!");
+                return;
+            }
+
+            currentBet = selectedAmount;
+            balance -= currentBet;
+            document.getElementById('balance-val').innerText = balance.toFixed(2);
+            
+            // Блокируем ввод на время раунда
+            inputField.disabled = true;
+            document.querySelectorAll('.bet-control-btn').forEach(b => b.disabled = true);
+
+            db.ref('bets/' + userId).set({ 
+                name: userName, 
+                amount: currentBet, 
+                status: "playing" 
+            });
+
+            btn.disabled = true;
+            btn.innerText = "СТАВКА ПРИНЯТА";
+            
+        } else if(gameStatus === "flying" && currentBet > 0 && !hasCashedOut) {
+            // Логика вывода (Cash Out) остается прежней
+            hasCashedOut = true;
+            let win = currentBet * parseFloat(document.getElementById('mult').innerText);
+            balance += win;
+            document.getElementById('balance-val').innerText = balance.toFixed(2);
+            db.ref('bets/' + userId).update({ status: "win" });
+            
+            btn.disabled = true;
+            btn.innerText = "ВЫ ПРИНЯЛИ!";
+            btn.classList.remove('win');
+        }
+    }
+
+    // Не забудь в слушателе db.ref('game') при статусе "waiting" 
+    // разблокировать инпут:
+    // document.getElementById('bet-amount-input').disabled = false;
+    // document.querySelectorAll('.bet-control-btn').forEach(b => b.disabled = false);
+</script>
 
 <div class="nav-bar">
     <div class="nav-item active">🚀<span>Краш</span></div>
@@ -179,3 +294,4 @@
 </script>
 </body>
 </html>
+
