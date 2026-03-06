@@ -1,3 +1,11 @@
+ОШИБКА «Site not available» на твоем скриншоте возникла из-за того, что ты использовал хостинг Netlify, который отключил твой сайт после превышения лимитов бесплатного тарифа при подключении других игроков.
+
+Чтобы игра работала стабильно для всех, нам нужно перенести её на GitHub Pages (как мы делали раньше) и полностью синхронизировать код с твоим сервером в PyCharm.
+
+Вот финальный, исправленный код в стиле твоего скриншота. ВАЖНО: Замени всё содержимое index.html на GitHub этим кодом.
+
+1. Твой index.html (Исправленный стиль и мультиплеер)
+HTML
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -8,100 +16,81 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --blue: #0088cc; --bg: #0b0b0e; --card: #141419; --green: #2ecc71; --red: #e74c3c; }
+        :root { --blue: #0088cc; --bg: #0b0b0e; --green: #2ecc71; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        body {
-            background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif;
-            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-        }
-
-        /* ВЕРХНЯЯ ПАНЕЛЬ: ОНЛАЙН И БАЛАНС */
+        /* ВЕРХНЯЯ ПАНЕЛЬ (как на скриншоте) */
         .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
-        .online-badge { background: rgba(46, 204, 113, 0.15); color: var(--green); padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .balance-badge { background: #1c1c21; padding: 5px 12px; border-radius: 50px; display: flex; align-items: center; gap: 8px; font-weight: bold; border: 1px solid #333; }
+        .online-badge { background: rgba(46, 204, 113, 0.15); color: var(--green); padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; }
+        .balance-badge { background: #1c1c21; padding: 5px 12px; border-radius: 50px; font-weight: bold; border: 1px solid #333; }
 
-        /* ИСТОРИЯ КОЭФФИЦИЕНТОВ (РЯД) */
-        .history-row { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; scrollbar-width: none; }
-        .history-item { background: #1c1c21; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; min-width: 40px; text-align: center; border: 1px solid #222; }
-        .h-waiting { background: var(--blue); }
+        /* ИСТОРИЯ (как на скриншоте) */
+        .history-row { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; }
+        .history-item { background: #1c1c21; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: bold; border: 1px solid #222; }
+        .h-blue { background: var(--blue); }
 
-        /* ИГРОВАЯ ЗОНА */
+        /* ЦЕНТР */
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #mult { font-size: 80px; font-weight: 900; margin: 0; z-index: 10; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        #r-container { width: 150px; height: 150px; position: absolute; z-index: 5; transition: transform 0.1s linear; }
-        #rocket { width: 100%; }
+        #mult { font-size: 80px; font-weight: 900; z-index: 10; margin: 0; }
+        #rocket { width: 150px; position: absolute; z-index: 5; transition: transform 0.1s linear; }
 
-        /* ГЛАВНАЯ КНОПКА (ГРАДИЕНТ ИЗ image_892b6d.png) */
-        .action-area { padding: 0 15px 15px 15px; }
-        #bet-trigger {
+        /* КНОПКА (Градиент как на скриншоте) */
+        .btn-area { padding: 15px; }
+        #bet-trigger { 
             background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%);
             color: white; border: none; padding: 18px; border-radius: 20px;
             font-size: 18px; font-weight: bold; width: 100%; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 102, 255, 0.3); transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 102, 255, 0.3);
         }
-        #bet-trigger:disabled { background: #2d2d35; box-shadow: none; color: #555; }
+        #bet-trigger.win { background: var(--green); }
+        #bet-trigger:disabled { background: #222; opacity: 0.5; box-shadow: none; }
 
-        /* ЛИДЕРБОРД */
-        .leaderboard { background: #141419; border-radius: 25px; margin: 0 15px; flex-grow: 0.8; margin-bottom: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #444; font-size: 14px; border: 1px solid #1c1c21; }
-
-        /* НИЖНЕЕ МЕНЮ (НАВИГАЦИЯ) */
-        .nav-bar { position: fixed; bottom: 0; width: 100%; background: #141419; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #1c1c21; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555; font-size: 10px; font-weight: bold; text-decoration: none; }
+        /* НИЖНЯЯ ПАНЕЛЬ (как на скриншоте) */
+        .nav-bar { background: #141419; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #1c1c21; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #555; font-size: 10px; }
         .nav-item.active { color: var(--blue); }
-        .nav-icon { width: 22px; height: 22px; filter: grayscale(1); opacity: 0.5; }
-        .active .nav-icon { filter: none; opacity: 1; }
     </style>
 </head>
 <body>
-
     <div class="header">
-        <div class="online-badge">👤 <span id="online-val">124</span></div>
-        <div class="balance-badge"><span>💎</span> <span id="balance-val">0.00</span> <span style="color:#555">+</span></div>
+        <div class="online-badge">👤 <span id="online-val">1</span></div>
+        <div class="balance-badge">💎 <span id="balance-val">10.00</span></div>
     </div>
 
-    <div class="history-row" id="history">
-        <div class="history-item h-waiting">Ожидание</div>
-        <div class="history-item" style="color:var(--green)">1.00</div>
+    <div class="history-row">
+        <div class="history-item h-blue">Ожидание</div>
         <div class="history-item" style="color:var(--green)">1.17</div>
-        <div class="history-item" style="color: #9b59b6;">1.51</div>
-        <div class="history-item" style="color:var(--green)">1.14</div>
+        <div class="history-item" style="color:#9b59b6">1.51</div>
         <div class="history-item" style="color:var(--green)">4.61</div>
     </div>
 
     <div id="game-zone">
         <h1 id="mult">1.00x</h1>
-        <div id="r-container">
-            <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
-        </div>
+        <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
     </div>
 
-    <div class="action-area">
+    <div class="btn-area">
         <button id="bet-trigger" onclick="handleMainAction()">Сделать ставку</button>
     </div>
 
-    <div class="leaderboard" id="bets-table">
-        Ожидание ставок
-    </div>
-
     <div class="nav-bar">
-        <div class="nav-item active">🚀 <span>Краш</span></div>
-        <div class="nav-item">🎁 <span>Кейсы</span></div>
-        <div class="nav-item">🏆 <span>Сезон</span></div>
-        <div class="nav-item">👤 <span>Профиль</span></div>
+        <div class="nav-item active">🚀<span>Краш</span></div>
+        <div class="nav-item">🎁<span>Кейсы</span></div>
+        <div class="nav-item">🏆<span>Сезон</span></div>
+        <div class="nav-item">👤<span>Профиль</span></div>
     </div>
 
     <script>
+        // ИНИЦИАЛИЗАЦИЯ ИЗ ТВОЕГО PYCHARM
         const firebaseConfig = { databaseURL: "https://nftrocket-cb448-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const tg = window.Telegram.WebApp;
-        tg.expand();
         const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
         let balance = 10.00;
         let currentBet = 0;
         let hasCashedOut = false;
-        let serverMultiplier = 1.00;
         let gameStatus = "waiting";
 
         // ОНЛАЙН СИСТЕМА
@@ -109,68 +98,51 @@
         onlineRef.set(true); onlineRef.onDisconnect().remove();
         db.ref('online').on('value', (s) => { document.getElementById('online-val').innerText = s.numChildren(); });
 
-        // ЛОГИКА ИГРЫ (ИЗ СЕРВЕРА)
-        db.ref('game').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if(!data) return;
+        // ЛОГИКА СЕРВЕРА
+        db.ref('game').on('value', (snap) => {
+            const data = snap.val(); if(!data) return;
             gameStatus = data.status;
-            serverMultiplier = data.multiplier;
-
-            const mText = document.getElementById('mult');
+            document.getElementById('mult').innerText = data.multiplier.toFixed(2) + "x";
+            
             const btn = document.getElementById('bet-trigger');
-            const rContainer = document.getElementById('r-container');
+            const rocket = document.getElementById('rocket');
 
             if(data.status === "waiting") {
-                mText.innerText = "1.00x";
-                mText.style.color = "white";
-                rContainer.style.transform = 'translate(-50%, -50%) rotate(0deg)';
-                if(!currentBet) {
-                    btn.disabled = false;
-                    btn.innerText = "Сделать ставку";
-                    btn.style.background = "linear-gradient(180deg, #00a2ff 0%, #0066ff 100%)";
-                }
-            }
-
-            if(data.status === "flying") {
-                mText.innerText = data.multiplier.toFixed(2) + "x";
-                let off = (data.multiplier - 1) * 50;
-                rContainer.style.transform = `translate(calc(-50% + ${off}px), calc(-50% - ${off}px)) rotate(-15deg)`;
-
+                btn.disabled = false; btn.innerText = "Сделать ставку";
+                btn.className = ""; rocket.style.transform = "translate(0,0)";
+            } else if(data.status === "flying") {
+                let off = (data.multiplier - 1) * 40;
+                rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
                 if(currentBet > 0 && !hasCashedOut) {
-                    btn.disabled = false;
-                    btn.innerText = `ВЫВЕСТИ ${(currentBet * data.multiplier).toFixed(2)}`;
-                    btn.style.background = "#2ecc71";
+                    btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
+                    btn.classList.add('win');
                 }
-            }
-
-            if(data.status === "crash") {
-                mText.innerText = "BOOM!";
-                mText.style.color = "#e74c3c";
-                if(currentBet > 0 && !hasCashedOut) {
-                    btn.innerText = "СГОРЕЛО";
-                    btn.disabled = true;
-                }
-                setTimeout(() => { currentBet = 0; hasCashedOut = false; }, 2000);
+            } else if(data.status === "crash") {
+                document.getElementById('mult').style.color = "#e74c3c";
+                btn.disabled = true; btn.innerText = "БУМ!";
+                setTimeout(() => { 
+                    currentBet = 0; hasCashedOut = false; 
+                    document.getElementById('mult').style.color = "white";
+                }, 2000);
             }
         });
 
         function handleMainAction() {
             if(gameStatus === "waiting") {
                 currentBet = 1.0;
-                db.ref('bets/' + userName).set({ name: userName, amount: 1.0, status: "playing" });
-                document.getElementById('bet-trigger').innerText = "Ожидание...";
+                db.ref('bets/' + userName).set({ name: userName, status: "playing" });
                 document.getElementById('bet-trigger').disabled = true;
+                document.getElementById('bet-trigger').innerText = "СТАВКА ПРИНЯТА";
             } else if(gameStatus === "flying" && currentBet > 0) {
                 hasCashedOut = true;
-                balance += (currentBet * serverMultiplier);
+                balance += (currentBet * parseFloat(document.getElementById('mult').innerText));
                 document.getElementById('balance-val').innerText = balance.toFixed(2);
-                db.ref('bets/' + userName).update({ status: "win", out: serverMultiplier.toFixed(2) });
-                document.getElementById('bet-trigger').innerText = "ВЫ ПРИНЯЛИ!";
-                document.getElementById('bet-trigger').style.background = "#222";
+                db.ref('bets/' + userName).update({ status: "win" });
                 document.getElementById('bet-trigger').disabled = true;
+                document.getElementById('bet-trigger').innerText = "ВЫ ПРИНЯЛИ!";
+                document.getElementById('bet-trigger').className = "";
             }
         }
     </script>
 </body>
 </html>
-
