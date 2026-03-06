@@ -1,82 +1,170 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <style>
-        :root { --blue: #007bff; --bg: #0b0b0e; --card: #141419; }
-        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; text-align: center; }
-        #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #mult { font-size: 72px; font-weight: 900; margin: 0; }
-        #bet-trigger { background: var(--blue); color: white; border: none; padding: 15px 30px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; width: 80%; margin: 20px auto; }
-        #bet-trigger:disabled { background: #333; opacity: 0.6; }
-        .p-row { display: flex; justify-content: space-between; padding: 10px; background: var(--card); margin: 5px; border-radius: 8px; font-size: 14px; }
-    </style>
-</head>
-<body>
-    <div id="game-status">ОЖИДАНИЕ СЕРВЕРА...</div>
-    <div id="game-zone">
-        <h1 id="mult">1.00x</h1>
-    </div>
-    <div id="bets-table"></div>
-    <button id="bet-trigger" onclick="handleMainAction()">Сделать ставку</button>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-    <script>
-        const firebaseConfig = {
-            databaseURL: "https://nftrocket-cb448-default-rtdb.europe-west1.firebasedatabase.app"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const tg = window.Telegram.WebApp;
-        const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
+<script>
+    // --- ИНИЦИАЛИЗАЦИЯ FIREBASE (Твоя ссылка) ---
+    const firebaseConfig = {
+        databaseURL: "https://nftrocket-cb448-default-rtdb.europe-west1.firebasedatabase.app"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-        let currentBet = 0;
-        let serverMultiplier = 1.00;
-        let gameStatus = "waiting";
+    const tg = window.Telegram.WebApp;
+    const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
-        db.ref('game').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if(!data) return;
-            gameStatus = data.status;
-            serverMultiplier = data.multiplier;
-            document.getElementById('mult').innerText = data.multiplier.toFixed(2) + "x";
-            
-            const btn = document.getElementById('bet-trigger');
-            if(data.status === "waiting") {
-                document.getElementById('game-status').innerText = `Старт через: ${data.wait}с`;
+    // Твои переменные состояния
+    let balance = 10.00;
+    let currentBet = 0;
+    let hasCashedOut = false;
+    let serverMultiplier = 1.00;
+    let gameStatus = "waiting";
+
+    // --- СЛУШАЕМ СЕРВЕР (Общая ракета для всех) ---
+    db.ref('game').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if(!data) return;
+
+        gameStatus = data.status;
+        serverMultiplier = data.multiplier;
+
+        const mText = document.getElementById('mult');
+        const sLabel = document.getElementById('game-status');
+        const rocketContainer = document.getElementById('r-container');
+        const rocketFly = document.getElementById('rocket');
+        const explosion = document.getElementById('explosion');
+        const btn = document.getElementById('bet-trigger');
+
+        if(data.status === "waiting") {
+            sLabel.innerText = `Старт через: ${data.wait}с`;
+            mText.innerText = "1.00x";
+            mText.style.color = "white";
+            rocketFly.style.display = 'block';
+            explosion.style.display = 'none';
+            rocketContainer.style.transition = 'none';
+            rocketContainer.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+
+            if(!currentBet) {
                 btn.disabled = false;
-                btn.innerText = "Сделать ставку (10 💎)";
-                btn.style.background = "#007bff";
-            } else if(data.status === "flying") {
-                document.getElementById('game-status').innerText = "ПОЛЕТ!";
-                if(currentBet > 0) {
-                    btn.innerText = `ЗАБРАТЬ ${(currentBet * serverMultiplier).toFixed(2)}`;
-                    btn.style.background = "#28a745";
-                }
-            } else if(data.status === "crash") {
-                document.getElementById('mult').innerText = "BOOM!";
-                btn.disabled = true;
-                btn.innerText = "СГОРЕЛО";
-                currentBet = 0;
-            }
-        });
-
-        function handleMainAction() {
-            if(gameStatus === "waiting") {
-                currentBet = 10;
-                db.ref('bets/' + userName).set({ name: userName, amount: 10, status: "В игре" });
-                document.getElementById('bet-trigger').innerText = "Ставка принята!";
-                document.getElementById('bet-trigger').disabled = true;
-            } else if(gameStatus === "flying" && currentBet > 0) {
-                let win = currentBet * serverMultiplier;
-                alert("Вы выиграли: " + win.toFixed(2));
-                db.ref('bets/' + userName).update({ status: "Забрал x" + serverMultiplier.toFixed(2) });
-                currentBet = 0;
+                btn.innerText = "Сделать ставку";
+                btn.style.background = "var(--blue)";
             }
         }
-    </script>
-</body>
-</html>
+
+        if(data.status === "flying") {
+            sLabel.innerText = "ПОЛЕТ!";
+            mText.innerText = data.multiplier.toFixed(2) + "x";
+
+            // Плавное движение ракеты
+            rocketContainer.style.transition = '0.1s linear';
+            let offX = (data.multiplier - 1) * 70;
+            let offY = (data.multiplier - 1) * 90;
+            rocketContainer.style.transform = `translate(calc(-50% + ${offX}px), calc(-50% - ${offY}px)) rotate(-15deg)`;
+
+            if (currentBet > 0 && !hasCashedOut) {
+                btn.disabled = false;
+                btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
+            }
+        }
+
+        if(data.status === "crash") {
+            mText.innerText = "BOOM!";
+            mText.style.color = "red";
+            rocketFly.style.display = 'none';
+            explosion.style.display = 'block';
+
+            if(!hasCashedOut && currentBet > 0) {
+                btn.disabled = true;
+                btn.innerText = "СГОРЕЛО";
+            }
+
+            // Очистка локальной ставки для нового раунда
+            setTimeout(() => {
+                if(gameStatus === "crash") {
+                    currentBet = 0;
+                    hasCashedOut = false;
+                }
+            }, 2000);
+        }
+    });
+
+    // --- ОБЩИЙ СПИСОК СТАВОК (Видишь друга) ---
+    db.ref('bets').on('value', (snapshot) => {
+        const bets = snapshot.val();
+        const table = document.getElementById('bets-table');
+        table.innerHTML = "";
+        if(bets) {
+            Object.values(bets).forEach(b => {
+                table.innerHTML += `<div class="p-row">
+                    <div>
+                        <span>👤 ${b.name}</span>
+                        <span class="p-status" style="${b.style}">${b.status}</span>
+                    </div>
+                    <span style="color:#28a745">💎 ${b.amount.toFixed(2)}</span>
+                </div>`;
+            });
+        }
+    });
+
+    // --- ТВОИ ФУНКЦИИ ДЕЙСТВИЙ ---
+    function handleMainAction() {
+        if (gameStatus === "waiting") {
+            openAssetMenu();
+        } else if (gameStatus === "flying" && currentBet > 0 && !hasCashedOut) {
+            takeWin();
+        }
+    }
+
+    function confirmBet() {
+        let amount = parseFloat(document.getElementById('bet-amount').value);
+        if(amount > balance) return alert('Недостаточно 💎');
+        balance -= amount; currentBet = amount;
+        hasCashedOut = false;
+        document.getElementById('balance-val').innerText = balance.toFixed(2);
+
+        // Отправляем ставку в облако
+        db.ref('bets/' + userName).set({
+            name: userName,
+            amount: amount,
+            status: "В игре",
+            style: ""
+        });
+
+        closeModal();
+        document.getElementById('bet-trigger').disabled = true;
+        document.getElementById('bet-trigger').innerText = "Ожидание взлета...";
+    }
+
+    function takeWin() {
+        hasCashedOut = true;
+        let win = currentBet * serverMultiplier;
+        balance += win;
+        document.getElementById('balance-val').innerText = balance.toFixed(2);
+        document.getElementById('bet-trigger').innerText = `ЗАБРАЛ +${win.toFixed(2)}`;
+        document.getElementById('bet-trigger').style.background = "#28a745";
+
+        // Обновляем статус ставки для всех игроков
+        db.ref('bets/' + userName).update({
+            status: "Забрал x" + serverMultiplier.toFixed(2),
+            style: "color:#28a745"
+        });
+    }
+
+    // Вспомогательные функции интерфейса
+    function openAssetMenu() { if(gameStatus === "waiting") document.getElementById('asset-modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('asset-modal').style.display = 'none'; }
+    function showBetInput() { document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'block'; }
+
+    // Лоадер
+    let pr=0;
+    let lI = setInterval(() => {
+        if(pr < 100) {
+            pr += 5;
+            document.getElementById('f').style.width = pr + '%';
+        } else {
+            clearInterval(lI);
+            document.getElementById('loader').style.display = 'none';
+        }
+    }, 50);
+</script>
+
