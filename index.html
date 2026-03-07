@@ -192,32 +192,20 @@
             const now = Date.now();
 
             if (g.status === "waiting" && (now - g.ts > 8000)) {
-                // ВЫЧИСЛЯЕМ ТОЧКУ КРАША СТРОГО ПЕРЕД ВЗЛЕТОМ
+                // ВЫЧИСЛЯЕМ ТОЧКУ КРАША СТРОГО ПО БАНКУ
                 let cp = 1.01;
 
                 if (bank <= 0) {
-                    cp = 1.01; // Банка нет - гарантированный стоп на 1.01
+                    cp = 1.01; // Банка нет — падает мгновенно
+                } else if (bank < 50) {
+                    cp = 1.10; // Маленький банк — фиксированный низкий стоп
+                } else if (bank >= 50 && bank < 500) {
+                    cp = 1.85; // Средний банк
                 } else {
-                    let rand = Math.random();
-                    if (bank < 20) {
-                        // Банк маленький - диапазон 1.01 - 1.10
-                        cp = parseFloat((1.01 + Math.random() * 0.09).toFixed(2));
-                    } else {
-                        // Банк есть:
-                        if (rand < 0.7) {
-                            // 70% случаев: 1.5 - 2.0
-                            cp = parseFloat((1.5 + Math.random() * 0.5).toFixed(2));
-                        } else if (rand < 0.9) {
-                            // 20% случаев: 2.0 - 3.0
-                            cp = parseFloat((2.0 + Math.random() * 1.0).toFixed(2));
-                        } else {
-                            // 10% случаев: сливной мелкий коэффициент для вида
-                            cp = parseFloat((1.1 + Math.random() * 0.3).toFixed(2));
-                        }
-                    }
+                    cp = 2.75; // Крупный банк
                 }
 
-                // Записываем статус и расчетный коэффициент
+                // Записываем статус и жесткую точку остановки
                 db.ref('game').set({
                     status: "flying",
                     multiplier: 1.0,
@@ -229,17 +217,22 @@
             } else if (g.status === "flying") {
                 let currentM = parseFloat(g.multiplier);
                 let targetCP = parseFloat(g.crashPoint || 1.1);
+                // Округляем до 2 знаков, чтобы не было 3.599999995
                 let nextM = parseFloat((currentM + 0.01).toFixed(2));
 
                 // Проверяем текущие выплаты в реальном времени
                 let totalPayoutIfWin = 0;
                 const betsSnap = await db.ref('bets').once('value');
                 betsSnap.forEach(c => {
-                    if(c.val().status === "playing") totalPayoutIfWin += c.val().amount * nextM;
+                    if(c.val().status === "playing") {
+                        totalPayoutIfWin += (c.val().amount * nextM);
+                    }
                 });
 
-                // УСЛОВИЕ КРАША: достигли точки ИЛИ выплаты > 80% банка
-                if (currentM >= targetCP || totalPayoutIfWin > (bank * 0.8)) {
+                // УСЛОВИЕ КРАША (Никакого рандома):
+                // 1. Достигли лимита по банку (targetCP)
+                // 2. ИЛИ игроки прямо сейчас хотят забрать больше 80% всего банка
+                if (currentM >= targetCP || (totalPayoutIfWin > (bank * 0.8) && bank > 0)) {
                     db.ref('game').update({ status: "crash", multiplier: currentM, ts: now });
                     db.ref('history').push(currentM);
                 } else {
@@ -249,7 +242,7 @@
             } else if (g.status === "crash" && (now - g.ts > 4500)) {
                 db.ref('game').update({ status: "waiting", multiplier: 1.0, ts: now });
             }
-        }, 120);
+        }, 130); // Оптимальный интервал для стабильной записи в Firebase
     }
 
     // --- КЛИЕНТСКИЙ ЦИКЛ (ВИЗУАЛ) ---
