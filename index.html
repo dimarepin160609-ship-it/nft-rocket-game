@@ -104,13 +104,11 @@
 <div id="scr-admin" class="screen">
     <div class="profile-content">
         <h2 style="color:var(--blue)">АДМИН-ЦЕНТР</h2>
-
         <div class="bal-card" style="border: 1px solid var(--gold);">
             <p style="font-size:12px; color:#666; font-weight: 800;">БАНК ВЫПЛАТ (80% RTP)</p>
             <div class="bal-val" style="color:var(--gold);">💰 <span id="adm-bank-val">0.00</span></div>
             <button onclick="adminResetBank()" style="width:100%; padding:12px; background:#222; border:1px solid #444; border-radius:10px; color:white; font-size:11px; margin-top:10px; font-weight:bold;">ОБНУЛИТЬ БАНК</button>
         </div>
-
         <div class="bal-card">
             <p style="font-size:12px; color:#666;">ID ЦЕЛИ</p>
             <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
@@ -181,7 +179,6 @@
     let currentGlobalBank = 0;
     let totalActiveBetsSum = 0;
 
-    // СИСТЕМА БАНКА
     db.ref('game_stats/bank').on('value', snap => {
         currentGlobalBank = parseFloat(snap.val() || 0);
         if(document.getElementById('adm-bank-val')) {
@@ -189,7 +186,6 @@
         }
     });
 
-    // ОНЛАЙН
     const onlineRef = db.ref('presence/' + userId);
     onlineRef.set(true);
     onlineRef.onDisconnect().remove();
@@ -242,7 +238,7 @@
         }
     }
 
-    // ГЛОБАЛЬНАЯ ЛОГИКА ИГРЫ
+    // ЛОГИКА ИГРЫ С ПОЛНЫМ ФИКС СЛИВА ДЛЯ ВСЕХ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
@@ -253,12 +249,18 @@
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
 
-        // МОМЕНТАЛЬНЫЙ КРАШ (Шанс 10%)
-        if (gameStatus === "waiting" && Math.random() < 0.10) {
-            // Если скрипт сервера еще не запустил полет, можем симулировать быстрый взрыв
-            // Но лучше это делать через Python скрипт. Здесь мы просто фиксируем поведение.
+        // 1. ПРОВЕРКА БАНКА (АНТИ-ГРАБЕЖ ГЛОБАЛЬНЫЙ)
+        // Если летим, проверяем: может ли банк выплатить всем текущим игрокам?
+        if (gameStatus === "flying" && totalActiveBetsSum > 0) {
+            let potentialPayout = totalActiveBetsSum * curMult;
+            // Если выплата > 80% банка, принудительно ставим КРАШ в Firebase для ВСЕХ
+            if (potentialPayout >= (currentGlobalBank * 0.8)) {
+                db.ref('game/status').set("crash");
+                return; // Останавливаем выполнение здесь, ждем обновления от Firebase
+            }
         }
 
+        // 2. ОБРАБОТКА КРАША (Заморозка интерфейса)
         if (gameStatus === "crash") {
             multEl.innerText = curMult.toFixed(2) + "x";
             multEl.style.color = "var(--red)";
@@ -267,21 +269,13 @@
             return;
         }
 
+        // 3. ОБЫЧНЫЙ ПОЛЕТ
         const oldVal = parseFloat(multEl.innerText);
         multEl.innerText = curMult.toFixed(2) + "x";
 
         if(curMult > oldVal) {
             multEl.classList.add('pulse');
             setTimeout(() => multEl.classList.remove('pulse'), 100);
-        }
-
-        // АНТИ-ГРАБЕЖ (ГЛОБАЛЬНЫЙ): Крашит серверную часть, если выплата превышает 80% банка
-        if(gameStatus === "flying" && curMult > 1.01) {
-            let potentialPayout = totalActiveBetsSum * curMult;
-            // Сливаем, если нет денег в банке ИЛИ рандомно сливаем на 1.00x (шанс 5%)
-            if(potentialPayout >= (currentGlobalBank * 0.8) || (curMult < 1.05 && Math.random() < 0.05)) {
-                db.ref('game').update({ status: "crash" });
-            }
         }
 
         if(gameStatus === "waiting") {
