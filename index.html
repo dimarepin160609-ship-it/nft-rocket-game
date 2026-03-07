@@ -167,7 +167,7 @@
 
     let balance = 0, currentBet = 0, hasCashedOut = false, gameStatus = "waiting", bank = 0;
 
-    // СИНХРОНИЗАЦИЯ БАЛАНСА И БАНКА
+    // СИНХРОНИЗАЦИЯ
     db.ref('users/' + userId + '/balance').on('value', s => {
         balance = parseFloat(s.val() || 0);
         document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2));
@@ -182,33 +182,70 @@
     onlineRef.set(true); onlineRef.onDisconnect().remove();
     db.ref('presence').on('value', s => document.getElementById('online-val').innerText = s.numChildren() || 1);
 
-    // --- ЛОГИКА RTP (АДМИН-СЕРВЕР) ---
+    // --- ЛОГИКА RTP (АДМИН-КОНТРОЛЛЕР) ---
     if (userId == ADMIN_ID) {
         document.getElementById('nav-admin-btn').style.display = 'flex';
+
         setInterval(async () => {
             const gSnap = await db.ref('game').once('value');
             const g = gSnap.val() || { status: "waiting", multiplier: 1, ts: Date.now() };
             const now = Date.now();
 
             if (g.status === "waiting" && (now - g.ts > 8000)) {
-                db.ref('game').set({ status: "flying", multiplier: 1.0, ts: now });
+                // ВЫЧИСЛЯЕМ ТОЧКУ КРАША СТРОГО ПЕРЕД ВЗЛЕТОМ
+                let cp = 1.01;
+
+                if (bank <= 0) {
+                    cp = 1.01; // Банка нет - гарантированный стоп на 1.01
+                } else {
+                    let rand = Math.random();
+                    if (bank < 20) {
+                        // Банк маленький - диапазон 1.01 - 1.10
+                        cp = parseFloat((1.01 + Math.random() * 0.09).toFixed(2));
+                    } else {
+                        // Банк есть:
+                        if (rand < 0.7) {
+                            // 70% случаев: 1.5 - 2.0
+                            cp = parseFloat((1.5 + Math.random() * 0.5).toFixed(2));
+                        } else if (rand < 0.9) {
+                            // 20% случаев: 2.0 - 3.0
+                            cp = parseFloat((2.0 + Math.random() * 1.0).toFixed(2));
+                        } else {
+                            // 10% случаев: сливной мелкий коэффициент для вида
+                            cp = parseFloat((1.1 + Math.random() * 0.3).toFixed(2));
+                        }
+                    }
+                }
+
+                // Записываем статус и расчетный коэффициент
+                db.ref('game').set({
+                    status: "flying",
+                    multiplier: 1.0,
+                    crashPoint: cp,
+                    ts: now
+                });
                 db.ref('bets').remove();
+
             } else if (g.status === "flying") {
                 let currentM = parseFloat(g.multiplier);
+                let targetCP = parseFloat(g.crashPoint || 1.1);
                 let nextM = parseFloat((currentM + 0.01).toFixed(2));
 
+                // Проверяем текущие выплаты в реальном времени
                 let totalPayoutIfWin = 0;
                 const betsSnap = await db.ref('bets').once('value');
                 betsSnap.forEach(c => {
                     if(c.val().status === "playing") totalPayoutIfWin += c.val().amount * nextM;
                 });
 
-                if (totalPayoutIfWin > (bank * 0.8) || (bank <= 0 && nextM > 1.01) || Math.random() < 0.0025) {
+                // УСЛОВИЕ КРАША: достигли точки ИЛИ выплаты > 80% банка
+                if (currentM >= targetCP || totalPayoutIfWin > (bank * 0.8)) {
                     db.ref('game').update({ status: "crash", multiplier: currentM, ts: now });
                     db.ref('history').push(currentM);
                 } else {
                     db.ref('game/multiplier').set(nextM);
                 }
+
             } else if (g.status === "crash" && (now - g.ts > 4500)) {
                 db.ref('game').update({ status: "waiting", multiplier: 1.0, ts: now });
             }
@@ -302,7 +339,6 @@
         tg.HapticFeedback.selectionChanged();
     }
 
-    // АДМИН ПАНЕЛЬ
     function adminGiveBalance() {
         const id = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
@@ -322,8 +358,6 @@
             });
         }
     }
-
-    // НОВАЯ ФУНКЦИЯ ДЛЯ ОБНУЛЕНИЯ БАНКА
     function adminResetBank() {
         if(confirm("ВЫ УВЕРЕНЫ, ЧТО ХОТИТЕ ОБНУЛИТЬ БАНК RTP?")) {
             db.ref('game_stats/bank').set(0);
