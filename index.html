@@ -3,96 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFTROCKET Pro</title>
+    <title>NFTROCKET Pro Custom</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root {
-            --blue: #0088cc;
-            --bg: #0b0b0e;
-            --green: #2ecc71;
-            --red: #e74c3c;
-            --card: #141419;
-            --nft-bg: linear-gradient(145deg, #001a2e, #000d1a); /* Темно-синий фон карточек */
+            --accent: #00a2ff;
+            --bg-deep: #050507;
+            --bg-card: #0e1117;
+            --glass: rgba(255, 255, 255, 0.05);
+            --green: #00f2a9;
+            --red: #ff3b5c;
+            --nft-grad: linear-gradient(135deg, #0a192f 0%, #02060c 100%);
         }
 
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-        /* ЭКРАНЫ */
-        .screen { display: none; flex-direction: column; height: 100%; overflow: hidden; flex-grow: 1; }
-        .screen.active { display: flex; }
+        body {
+            background: var(--bg-deep);
+            color: #e2e8f0;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
 
         /* ЛОАДЕР */
-        #loader { position: fixed; inset: 0; background: #0b0b0e; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
-        #loader h2 { font-size: 32px; letter-spacing: 5px; font-weight: 900; background: linear-gradient(90deg, #fff, var(--blue), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 2s infinite linear; }
-        @keyframes shine { 0% { background-position: -200px; } 100% { background-position: 200px; } }
-        .progress-bar { width: 200px; height: 3px; background: #1c1c21; border-radius: 10px; margin-top: 20px; overflow: hidden; }
-        #f-line { width: 0%; height: 100%; background: var(--blue); box-shadow: 0 0 15px var(--blue); }
-
-        /* ИНТЕРФЕЙС КРАША */
-        .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
-        .online-badge { background: rgba(46, 204, 113, 0.1); color: var(--green); padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: bold; border: 1px solid rgba(46, 204, 113, 0.2); }
-        .balance-badge { background: #1c1c21; padding: 6px 14px; border-radius: 50px; font-weight: bold; border: 1px solid #333; display: flex; align-items: center; gap: 6px; }
-
-        /* ЦВЕТНАЯ ИСТОРИЯ */
-        .history-row { display: flex; gap: 8px; padding: 5px 15px 15px; overflow-x: auto; scrollbar-width: none; min-height: 35px; }
-        .history-item { padding: 4px 14px; border-radius: 50px; font-size: 12px; font-weight: bold; min-width: 45px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
-        .hist-low { background: rgba(231, 76, 60, 0.2); color: #ff4d4d; } /* < 2x - красный */
-        .hist-mid { background: rgba(0, 136, 204, 0.2); color: #00a2ff; } /* 2x-10x - синий */
-        .hist-high { background: rgba(46, 204, 113, 0.2); color: #2ecc71; } /* > 10x - зеленый */
-
-        #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
-        #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; transition: color 0.3s; }
-        #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
-
-        /* NFT PREVIEW ПРИ ПОЛЕТЕ */
-        #nft-stage { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); opacity: 0; transition: 0.5s ease; text-align: center; z-index: 1; pointer-events: none; }
-        #nft-stage.visible { opacity: 1; transform: translate(-50%, -55%) scale(1.1); }
-        #nft-stage img { width: 100px; filter: drop-shadow(0 0 15px var(--blue)); }
-        #nft-stage div { font-size: 14px; font-weight: 900; color: var(--blue); margin-top: 8px; text-transform: uppercase; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
-
-        #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 240px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
-        .bets-header { padding: 12px; text-align: center; color: #555; font-size: 13px; border-bottom: 1px solid #1c1c21; }
-        #bets-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
-        .bet-card { display: flex; justify-content: space-between; padding: 12px; background: #0b0b0e; border-radius: 12px; margin-bottom: 8px; border: 1px solid #222; }
-
-        .controls { background: var(--card); padding: 15px 15px 25px; border-top: 1px solid #1c1c21; }
-        #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; }
-        #bet-trigger.win { background: var(--green); }
-        #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
-
-        /* ИНВЕНТАРЬ - СИНИЙ ФОН И КРАСИВЫЕ КАРТЫ */
-        #inventory-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
-        .inv-item {
-            background: var(--nft-bg);
-            border: 1px solid rgba(0, 136, 204, 0.3);
-            border-radius: 20px;
-            padding: 20px 10px;
-            text-align: center;
-            position: relative;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        #loader {
+            position: fixed; inset: 0; background: var(--bg-deep); z-index: 2000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .inv-item img { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,136,204,0.5)); margin-bottom: 10px; }
-        .inv-item span { display: block; font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 5px; }
-        .inv-item .rarity { font-size: 10px; color: var(--blue); font-weight: 900; letter-spacing: 1px; }
+        #loader h2 {
+            font-size: 28px; letter-spacing: 8px; font-weight: 800; color: white;
+            text-shadow: 0 0 20px var(--accent); margin-bottom: 20px;
+        }
+        .progress-bar { width: 180px; height: 2px; background: #1a1a20; border-radius: 10px; overflow: hidden; }
+        #f-line { width: 0%; height: 100%; background: var(--accent); box-shadow: 0 0 15px var(--accent); transition: width 0.3s; }
+
+        /* ЭКРАНЫ */
+        .screen { display: none; flex-direction: column; height: 100%; flex-grow: 1; opacity: 0; transition: opacity 0.3s; }
+        .screen.active { display: flex; opacity: 1; }
+
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; padding: 20px 15px; }
+        .badge {
+            background: var(--bg-card); border: 1px solid var(--glass);
+            padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .online-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); }
+
+        /* ИСТОРИЯ */
+        .history-row { display: flex; gap: 10px; padding: 0 15px 15px; overflow-x: auto; scrollbar-width: none; }
+        .hist-item {
+            padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800;
+            background: var(--bg-card); border: 1px solid var(--glass);
+        }
+        .low { color: var(--red); border-color: rgba(255, 59, 92, 0.2); }
+        .mid { color: var(--accent); border-color: rgba(0, 162, 255, 0.2); }
+        .high { color: var(--green); border-color: rgba(0, 242, 169, 0.2); text-shadow: 0 0 5px var(--green); }
+
+        /* ИГРОВАЯ ЗОНА */
+        #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #mult { font-size: 64px; font-weight: 900; margin: 0; z-index: 10; letter-spacing: -2px; }
+        #rocket {
+            width: 110px; position: absolute; z-index: 5;
+            filter: drop-shadow(0 0 20px var(--accent));
+        }
+
+        #nft-stage {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            opacity: 0; text-align: center; z-index: 1; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #nft-stage.visible { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        #nft-stage img { width: 90px; filter: drop-shadow(0 0 15px var(--accent)); }
+        #nft-stage .name { font-size: 12px; font-weight: 900; color: var(--accent); margin-top: 10px; text-transform: uppercase; }
+
+        /* СПИСОК СТАВОК */
+        #bets-container {
+            background: var(--bg-card); border-radius: 24px 24px 0 0;
+            margin: 0 10px; height: 200px; display: flex; flex-direction: column;
+            border: 1px solid var(--glass);
+        }
+        .bets-header { padding: 12px; text-align: center; color: #4b5563; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        #bets-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        .bet-card {
+            display: flex; justify-content: space-between; padding: 10px 15px;
+            background: rgba(255,255,255,0.02); border-radius: 12px; margin-bottom: 6px; font-size: 13px;
+        }
+
+        /* УПРАВЛЕНИЕ */
+        .controls { background: var(--bg-card); padding: 15px 20px 30px; border-top: 1px solid var(--glass); }
+        #bet-trigger {
+            background: linear-gradient(135deg, #007cf0 0%, #00dfd8 100%);
+            color: white; border: none; padding: 18px; border-radius: 16px;
+            font-size: 16px; font-weight: 800; width: 100%; transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 124, 240, 0.3);
+        }
+        #bet-trigger:active { transform: scale(0.98); }
+        #bet-trigger.win { background: linear-gradient(135deg, #00f2a9 0%, #00c489 100%); box-shadow: 0 4px 15px rgba(0, 242, 169, 0.3); }
+
+        /* ИНВЕНТАРЬ */
+        #inventory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 15px; }
+        .inv-item {
+            background: var(--nft-grad);
+            border: 1px solid rgba(0, 162, 255, 0.2);
+            border-radius: 18px; padding: 20px 10px; text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .inv-item img { width: 70px; height: 70px; margin-bottom: 12px; filter: drop-shadow(0 0 8px var(--accent)); }
+        .inv-item .n { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; display: block; }
+        .inv-item .r { font-size: 9px; color: var(--accent); font-weight: 900; text-transform: uppercase; }
 
         /* ПРОФИЛЬ */
-        .profile-content { padding: 20px; text-align: center; flex-grow: 1; overflow-y: auto; }
-        .avatar-circle { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--blue); margin: 0 auto 15px; overflow: hidden; background: #1c1c21; }
-        .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-        .bal-card { background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid #1c1c21; margin-bottom: 20px; }
-        .bal-val { font-size: 30px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .profile-card { background: var(--bg-card); border-radius: 20px; padding: 20px; margin: 15px; border: 1px solid var(--glass); }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--accent); margin: 0 auto 15px; display: block; padding: 3px; }
 
-        /* НАВИГАЦИЯ */
-        .nav-bar { background: var(--card); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1c1c21; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #444; font-size: 11px; gap: 5px; cursor: pointer; }
-        .nav-item.active { color: var(--blue); }
+        /* NAV */
+        .nav-bar { background: var(--bg-card); display: flex; justify-content: space-around; padding: 12px 0 25px; border-top: 1px solid var(--glass); }
+        .nav-item { color: #4b5563; font-size: 10px; font-weight: 700; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item i { font-size: 18px; margin-bottom: 2px; }
 
-        /* МОДАЛКА СТАВКИ */
-        #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; }
-        #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s ease-out; padding: 30px 20px; }
+        /* MODAL */
+        #bet-modal {
+            position: fixed; bottom: -100%; left: 0; right: 0;
+            background: #0e1117; border-radius: 24px 24px 0 0; z-index: 1001;
+            transition: 0.4s cubic-bezier(0, 0.55, 0.45, 1); padding: 25px 20px 40px;
+            border-top: 1px solid var(--accent);
+        }
         #bet-modal.active { bottom: 0; }
+        .inp-group { background: #161b22; border-radius: 14px; padding: 15px; border: 1px solid var(--glass); margin-bottom: 20px; }
+        #bet-amount-input { background: transparent; border: none; color: white; width: 100%; font-size: 24px; font-weight: 800; text-align: center; outline: none; }
     </style>
 </head>
 <body>
@@ -104,62 +147,74 @@
 
 <div id="scr-crash" class="screen active">
     <div class="header">
-        <div class="online-badge">👤 <span id="online-val">1</span></div>
-        <div class="balance-badge">💎 <span class="balance-view">0.00</span></div>
+        <div class="badge"><div class="online-dot"></div> <span id="online-val">...</span></div>
+        <div class="badge" style="color:var(--accent)">💎 <span class="balance-view">0.00</span></div>
     </div>
+
     <div class="history-row" id="history-list"></div>
+
     <div id="game-zone">
         <div id="nft-stage">
             <img id="nft-preview-img" src="">
-            <div id="nft-preview-name">NFT NAME</div>
+            <div class="name" id="nft-preview-name">NFT ITEM</div>
         </div>
         <h1 id="mult">1.00x</h1>
         <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
     </div>
+
     <div id="bets-container">
-        <div class="bets-header" id="bets-count">Все ставки</div>
+        <div class="bets-header">Активные ставки</div>
         <div id="bets-list"></div>
     </div>
+
     <div class="controls">
-        <button id="bet-trigger" onclick="handleMainAction()">Сделать ставку</button>
+        <button id="bet-trigger" onclick="handleMainAction()">СДЕЛАТЬ СТАВКУ</button>
     </div>
 </div>
 
 <div id="scr-profile" class="screen">
-    <div class="profile-content">
-        <div class="avatar-circle"><img id="user-avatar" src="https://via.placeholder.com/100"></div>
-        <h2 id="display-name" style="margin: 0;">Игрок</h2>
-        <p id="user-id-val" style="color: #555; font-size: 12px; margin-bottom: 20px;">ID: ...</p>
+    <div style="overflow-y: auto; flex-grow: 1;">
+        <div class="profile-card" style="text-align: center;">
+            <img id="user-avatar" class="avatar" src="https://via.placeholder.com/80">
+            <h3 id="display-name" style="margin: 5px 0 0 0;">Игрок</h3>
+            <span id="user-id-val" style="color: #4b5563; font-size: 11px;">ID: ...</span>
 
-        <div class="bal-card">
-            <div style="color:#555; font-size:12px; font-weight:bold; text-transform:uppercase; margin-bottom: 5px;">Ваш баланс</div>
-            <div class="bal-val"><span style="color:var(--blue)">💎</span><span class="balance-view">0.00</span></div>
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--glass);">
+                <span style="font-size: 11px; color: #4b5563; text-transform: uppercase;">Текущий баланс</span>
+                <div style="font-size: 28px; font-weight: 900; color: var(--accent); margin-top: 5px;">
+                    💎 <span class="balance-view">0.00</span>
+                </div>
+            </div>
         </div>
 
-        <h3 style="text-align:left; font-size:14px; color:#555; margin-left:15px; text-transform: uppercase;">Моя коллекция NFT</h3>
+        <div style="padding: 0 15px;"><span style="font-size: 12px; font-weight: 800; color: #4b5563; text-transform: uppercase;">Моя коллекция</span></div>
         <div id="inventory-grid"></div>
     </div>
 </div>
 
 <div id="scr-admin" class="screen">
-    <div class="profile-content">
-        <h2 style="color:var(--blue)">АДМИН-ЦЕНТР</h2>
-        <div class="bal-card">
-            <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 10px; text-align: center;">
-            <input type="number" id="adm-amount" placeholder="Сумма (TON)" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
-            <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 10px;">ВЫДАТЬ БАЛАНС</button>
+    <div class="profile-card">
+        <h3 style="color: var(--accent); margin-top: 0;">ADMIN PANEL</h3>
+        <div class="inp-group">
+            <input type="text" id="adm-target-id" placeholder="User ID" style="width:100%; background:transparent; border:none; color:white; text-align:center;">
         </div>
+        <div class="inp-group">
+            <input type="number" id="adm-amount" placeholder="Amount (TON)" style="width:100%; background:transparent; border:none; color:white; text-align:center;">
+        </div>
+        <button onclick="adminGiveBalance()" style="width:100%; padding:15px; border-radius:12px; background:var(--green); border:none; font-weight:800; color:#000;">ВЫДАТЬ БАЛАНС</button>
     </div>
 </div>
 
-<div id="bet-modal-overlay" onclick="closeBetMenu()"></div>
+<div id="bet-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; display:none;" onclick="closeBetMenu()"></div>
 <div id="bet-modal">
-    <div style="display:flex; justify-content:space-between; margin-bottom:15px; color:#888;">
-        <span>Сумма (TON)</span>
-        <span onclick="setMax()" style="color:var(--blue); font-weight:bold;">MAX</span>
+    <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-size:12px; font-weight:700;">
+        <span style="color:#4b5563;">СУММА (TON)</span>
+        <span onclick="setMax()" style="color:var(--accent);">MAX</span>
     </div>
-    <input type="number" id="bet-amount-input" value="0.1" step="0.1" min="0.1" style="width:100%; padding:18px; border-radius:15px; background:#0b0b0e; border:1px solid #333; color:white; font-size:22px; text-align:center; outline:none; box-sizing:border-box;">
-    <button onclick="confirmBet()" style="width:100%; margin-top:20px; padding:20px; border-radius:20px; background:var(--blue); border:none; color:white; font-weight:900; font-size:18px;">ПОДТВЕРДИТЬ</button>
+    <div class="inp-group">
+        <input type="number" id="bet-amount-input" value="0.1" step="0.1">
+    </div>
+    <button onclick="confirmBet()" style="width:100%; padding:18px; border-radius:14px; background:var(--accent); border:none; color:white; font-weight:900; letter-spacing:1px;">ЗАКЛЮЧИТЬ ПАРИ</button>
 </div>
 
 <div class="nav-bar">
@@ -190,39 +245,28 @@
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting";
     let activeNFT = null;
 
-    // ОБНОВЛЕНИЕ ОНЛАЙНА (Рандомная имитация или из БД)
     function updateOnline() {
-        const online = Math.floor(Math.random() * (140 - 110 + 1)) + 110;
+        const online = Math.floor(Math.random() * (150 - 100)) + 100;
         document.getElementById('online-val').innerText = online;
     }
-    setInterval(updateOnline, 5000);
-    updateOnline();
+    setInterval(updateOnline, 4000); updateOnline();
 
-    // БАЛАНС
     db.ref('users/' + userId + '/balance').on('value', snap => {
         balance = parseFloat(snap.val() || 0);
-        updateBalanceView();
+        document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2));
     });
 
-    // ИНВЕНТАРЬ
     db.ref('users/' + userId + '/inventory').on('value', snap => {
         const grid = document.getElementById('inventory-grid');
-        grid.innerHTML = "";
-        const data = snap.val();
-        if(!data) grid.innerHTML = '<div style="grid-column: span 2; color:#444; padding:40px;">Нет NFT</div>';
-        else {
-            Object.values(data).forEach(nft => {
-                const item = document.createElement('div');
-                item.className = 'inv-item';
-                item.innerHTML = `<img src="${nft.img}"><span>${nft.name}</span><div class="rarity">NFT ITEM</div>`;
-                grid.appendChild(item);
-            });
-        }
+        grid.innerHTML = ""; const data = snap.val();
+        if(!data) grid.innerHTML = '<div style="grid-column: span 2; color:#4b5563; text-align:center; padding:30px; font-size:12px;">Пусто</div>';
+        else Object.values(data).forEach(nft => {
+            const item = document.createElement('div');
+            item.className = 'inv-item';
+            item.innerHTML = `<img src="${nft.img}"><span class="n">${nft.name}</span><span class="r">Rare Item</span>`;
+            grid.appendChild(item);
+        });
     });
-
-    function updateBalanceView() {
-        document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2));
-    }
 
     function switchScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -236,7 +280,6 @@
         }
     }
 
-    // ИГРОВОЙ ЦИКЛ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
@@ -251,16 +294,15 @@
         if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
                 currentBet = 0; hasCashedOut = false; activeNFT = null;
-                btn.disabled = false; btn.innerText = "Сделать ставку";
+                btn.disabled = false; btn.innerText = "СДЕЛАТЬ СТАВКУ";
                 btn.classList.remove('win'); document.getElementById('mult').style.color = "white";
                 rocket.style.transform = "translate(0,0)";
                 nftStage.classList.remove('visible');
             }
         } else if(gameStatus === "flying") {
-            let off = Math.min((curMult - 1) * 45, 280);
-            rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
+            let move = Math.min((curMult - 1) * 50, 260);
+            rocket.style.transform = `translate(${move}px, -${move}px) rotate(-15deg)`;
 
-            // Проверка NFT
             let found = NFT_DATABASE.filter(n => curMult >= n.targetX).pop();
             if(found && currentBet > 0 && !hasCashedOut) {
                 activeNFT = found;
@@ -274,25 +316,20 @@
                 btn.classList.add('win');
             }
         } else if(gameStatus === "crash") {
-            document.getElementById('mult').style.color = "var(--red)";
-            btn.disabled = true; btn.innerText = "CRASH!";
+            document.getElementById('mult').style.color = var(--red);
+            btn.disabled = true; btn.innerText = "CRASHED";
             nftStage.classList.remove('visible');
         }
     });
 
-    // ИСТОРИЯ (ЦВЕТНАЯ)
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
         list.innerHTML = ""; const data = snap.val(); if(!data) return;
         Object.values(data).reverse().forEach(v => {
             const val = parseFloat(v);
             const i = document.createElement('div');
-            let colorClass = "hist-low";
-            if(val >= 10) colorClass = "hist-high";
-            else if(val >= 2) colorClass = "hist-mid";
-
-            i.className = `history-item ${colorClass}`;
-            i.innerText = val.toFixed(2) + 'x';
+            let cls = "low"; if(val >= 10) cls="high"; else if(val >= 2) cls="mid";
+            i.className = `hist-item ${cls}`; i.innerText = val.toFixed(2) + 'x';
             list.appendChild(i);
         });
     });
@@ -303,14 +340,14 @@
     }
 
     function openBetMenu() {
-        document.getElementById('bet-modal-overlay').style.display = 'block';
+        document.getElementById('bet-modal-overlay').style.display='block';
         setTimeout(() => document.getElementById('bet-modal').classList.add('active'), 10);
     }
     function closeBetMenu() {
         document.getElementById('bet-modal').classList.remove('active');
-        setTimeout(() => document.getElementById('bet-modal-overlay').style.display = 'none', 300);
+        setTimeout(() => document.getElementById('bet-modal-overlay').style.display='none', 400);
     }
-    function setMax() { document.getElementById('bet-amount-input').value = Math.floor(balance * 10) / 10; }
+    function setMax() { document.getElementById('bet-amount-input').value = Math.floor(balance*10)/10; }
 
     function confirmBet() {
         let amt = parseFloat(document.getElementById('bet-amount-input').value);
@@ -324,14 +361,13 @@
     }
 
     function handleCashOut() {
-        if(hasCashedOut) return;
-        hasCashedOut = true;
-        let win = currentBet * parseFloat(document.getElementById('mult').innerText);
-        db.ref('users/' + userId + '/balance').transaction(curr => (curr || 0) + win);
+        if(hasCashedOut) return; hasCashedOut = true;
+        let mult = parseFloat(document.getElementById('mult').innerText);
+        let win = currentBet * mult;
+        db.ref('users/' + userId + '/balance').transaction(c => (c || 0) + win);
         if(activeNFT) db.ref('users/' + userId + '/inventory').push(activeNFT);
-
-        tg.showAlert(activeNFT ? `🔥 ВЫИГРЫШ: ${win.toFixed(2)} TON + NFT!` : `💰 ЗАБРАЛИ: ${win.toFixed(2)} TON`);
-        document.getElementById('bet-trigger').innerText = "ЗАБРАНО!";
+        tg.showAlert(`🎉 ВЫИГРЫШ: ${win.toFixed(2)} TON`);
+        document.getElementById('bet-trigger').innerText = "ВЫИГРЫШ!";
         document.getElementById('bet-trigger').disabled = true;
     }
 
@@ -339,14 +375,19 @@
         const tId = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
         db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt);
-        tg.showAlert("Выдано!");
+        tg.showAlert("Баланс обновлен!");
     }
 
-    // ЛОАДЕР
-    let p = 0; let l = setInterval(() => {
-        p += 20; document.getElementById('f-line').style.width = p + '%';
-        if(p >= 100) { clearInterval(l); setTimeout(() => { document.getElementById('loader').style.display='none'; }, 400); }
-    }, 100);
+    // Loader logic
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        document.getElementById('f-line').style.width = progress + '%';
+        if (progress >= 100) {
+            clearInterval(interval);
+            setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+        }
+    }, 150);
 </script>
 </body>
 </html>
