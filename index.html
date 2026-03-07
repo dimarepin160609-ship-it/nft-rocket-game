@@ -8,7 +8,15 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --blue: #0088cc; --bg: #0b0b0e; --green: #2ecc71; --red: #e74c3c; --card: #141419; }
+        :root {
+            --blue: #0088cc;
+            --bg: #0b0b0e;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --card: #141419;
+            --nft-bg: linear-gradient(145deg, #001a2e, #000d1a); /* Темно-синий фон карточек */
+        }
+
         body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
         /* ЭКРАНЫ */
@@ -26,115 +34,65 @@
         .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
         .online-badge { background: rgba(46, 204, 113, 0.1); color: var(--green); padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: bold; border: 1px solid rgba(46, 204, 113, 0.2); }
         .balance-badge { background: #1c1c21; padding: 6px 14px; border-radius: 50px; font-weight: bold; border: 1px solid #333; display: flex; align-items: center; gap: 6px; }
+
+        /* ЦВЕТНАЯ ИСТОРИЯ */
         .history-row { display: flex; gap: 8px; padding: 5px 15px 15px; overflow-x: auto; scrollbar-width: none; min-height: 35px; }
-        .history-item { background: #1c1c21; padding: 4px 14px; border-radius: 50px; font-size: 12px; font-weight: bold; border: 1px solid #222; min-width: 45px; text-align: center; }
+        .history-item { padding: 4px 14px; border-radius: 50px; font-size: 12px; font-weight: bold; min-width: 45px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        .hist-low { background: rgba(231, 76, 60, 0.2); color: #ff4d4d; } /* < 2x - красный */
+        .hist-mid { background: rgba(0, 136, 204, 0.2); color: #00a2ff; } /* 2x-10x - синий */
+        .hist-high { background: rgba(46, 204, 113, 0.2); color: #2ecc71; } /* > 10x - зеленый */
 
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
-        #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; }
+        #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; transition: color 0.3s; }
         #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
 
-        /* NFT PREVIEW */
+        /* NFT PREVIEW ПРИ ПОЛЕТЕ */
         #nft-stage { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); opacity: 0; transition: 0.5s ease; text-align: center; z-index: 1; pointer-events: none; }
-        #nft-stage.visible { opacity: 0.7; transform: translate(-50%, -55%) scale(1.1); }
-        #nft-stage img { width: 100px; filter: drop-shadow(0 0 10px rgba(0,136,204,0.5)); }
-        #nft-stage div { font-size: 12px; font-weight: 900; color: var(--blue); margin-top: 5px; text-transform: uppercase; text-shadow: 0 0 5px black; }
+        #nft-stage.visible { opacity: 1; transform: translate(-50%, -55%) scale(1.1); }
+        #nft-stage img { width: 100px; filter: drop-shadow(0 0 15px var(--blue)); }
+        #nft-stage div { font-size: 14px; font-weight: 900; color: var(--blue); margin-top: 8px; text-transform: uppercase; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
 
-        #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 260px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
+        #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 240px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
         .bets-header { padding: 12px; text-align: center; color: #555; font-size: 13px; border-bottom: 1px solid #1c1c21; }
         #bets-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
         .bet-card { display: flex; justify-content: space-between; padding: 12px; background: #0b0b0e; border-radius: 12px; margin-bottom: 8px; border: 1px solid #222; }
-        .u-name { font-weight: bold; font-size: 14px; display: block; }
+
         .controls { background: var(--card); padding: 15px 15px 25px; border-top: 1px solid #1c1c21; }
         #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; }
         #bet-trigger.win { background: var(--green); }
         #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
 
-        /* --- ОБНОВЛЕННЫЙ ИНВЕНТАРЬ --- */
-        #inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            padding: 15px;
-            margin-top: 10px;
-        }
-
+        /* ИНВЕНТАРЬ - СИНИЙ ФОН И КРАСИВЫЕ КАРТЫ */
+        #inventory-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
         .inv-item {
-            background: linear-gradient(145deg, #1a1a20, #141419);
-            border: 1px solid rgba(255,255,255,0.05);
+            background: var(--nft-bg);
+            border: 1px solid rgba(0, 136, 204, 0.3);
             border-radius: 20px;
-            padding: 15px;
+            padding: 20px 10px;
             text-align: center;
             position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
         }
-
-        .inv-item:active { transform: scale(0.95); }
-
-        .inv-item img {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-            filter: drop-shadow(0 0 8px rgba(0,136,204,0.3));
-            margin-bottom: 10px;
-        }
-
-        .inv-item .item-status {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 8px;
-            background: var(--blue);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 5px;
-            font-weight: 900;
-            text-transform: uppercase;
-        }
-
-        .inv-item span {
-            display: block;
-            font-size: 13px;
-            font-weight: bold;
-            color: #eee;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .inv-item .item-rarity {
-            font-size: 10px;
-            color: var(--blue);
-            margin-top: 4px;
-            font-weight: 600;
-            opacity: 0.8;
-        }
+        .inv-item img { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,136,204,0.5)); margin-bottom: 10px; }
+        .inv-item span { display: block; font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 5px; }
+        .inv-item .rarity { font-size: 10px; color: var(--blue); font-weight: 900; letter-spacing: 1px; }
 
         /* ПРОФИЛЬ */
         .profile-content { padding: 20px; text-align: center; flex-grow: 1; overflow-y: auto; }
-        .profile-top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .lang-btn { background: #1c1c21; border: 1px solid #333; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
-        .avatar-circle { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--blue); margin: 0 auto 15px; overflow: hidden; background: #1c1c21; }
+        .avatar-circle { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--blue); margin: 0 auto 15px; overflow: hidden; background: #1c1c21; }
         .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-        .user-title { font-size: 24px; font-weight: bold; margin: 5px 0; }
-        .id-badge { display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 25px; cursor: pointer; }
-        .bal-card { background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid #1c1c21; margin-bottom: 15px; }
-        .bal-val { font-size: 32px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 5px; }
-        .prof-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .p-btn { padding: 16px; border-radius: 18px; border: none; font-weight: 800; font-size: 14px; cursor: pointer; }
-        .p-blue { background: var(--blue); color: white; }
-        .p-trans { background: transparent; border: 1px solid var(--blue); color: white; }
-        .inv-empty { background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 20px; padding: 40px; color: #444; font-size: 14px; width: 100%; box-sizing: border-box; grid-column: span 2; }
-
-        /* МОДАЛКА */
-        #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; }
-        #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s ease-out; padding: 25px 20px 40px; }
-        #bet-modal.active { bottom: 0; }
+        .bal-card { background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid #1c1c21; margin-bottom: 20px; }
+        .bal-val { font-size: 30px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
         /* НАВИГАЦИЯ */
         .nav-bar { background: var(--card); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1c1c21; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #444; font-size: 11px; gap: 5px; cursor: pointer; }
         .nav-item.active { color: var(--blue); }
+
+        /* МОДАЛКА СТАВКИ */
+        #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; }
+        #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s ease-out; padding: 30px 20px; }
+        #bet-modal.active { bottom: 0; }
     </style>
 </head>
 <body>
@@ -146,8 +104,8 @@
 
 <div id="scr-crash" class="screen active">
     <div class="header">
-        <div class="online-badge">👤 <span id="online-val">..</span></div>
-        <div class="balance-badge">💎 <span class="balance-view">...</span></div>
+        <div class="online-badge">👤 <span id="online-val">1</span></div>
+        <div class="balance-badge">💎 <span class="balance-view">0.00</span></div>
     </div>
     <div class="history-row" id="history-list"></div>
     <div id="game-zone">
@@ -167,10 +125,19 @@
     </div>
 </div>
 
-<div id="scr-mines" class="screen">
+<div id="scr-profile" class="screen">
     <div class="profile-content">
-        <h2 style="color:var(--blue)">МИНИ-ИГРА "МИНЫ"</h2>
-        <div class="inv-empty">Скоро открытие...</div>
+        <div class="avatar-circle"><img id="user-avatar" src="https://via.placeholder.com/100"></div>
+        <h2 id="display-name" style="margin: 0;">Игрок</h2>
+        <p id="user-id-val" style="color: #555; font-size: 12px; margin-bottom: 20px;">ID: ...</p>
+
+        <div class="bal-card">
+            <div style="color:#555; font-size:12px; font-weight:bold; text-transform:uppercase; margin-bottom: 5px;">Ваш баланс</div>
+            <div class="bal-val"><span style="color:var(--blue)">💎</span><span class="balance-view">0.00</span></div>
+        </div>
+
+        <h3 style="text-align:left; font-size:14px; color:#555; margin-left:15px; text-transform: uppercase;">Моя коллекция NFT</h3>
+        <div id="inventory-grid"></div>
     </div>
 </div>
 
@@ -178,40 +145,10 @@
     <div class="profile-content">
         <h2 style="color:var(--blue)">АДМИН-ЦЕНТР</h2>
         <div class="bal-card">
-            <p style="font-size:12px; color:#666;">ID ПОЛУЧАТЕЛЯ</p>
-            <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
-            <p style="font-size:12px; color:#666;">СУММА (TON)</p>
-            <input type="number" id="adm-amount" placeholder="10.0" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center;">
+            <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 10px; text-align: center;">
+            <input type="number" id="adm-amount" placeholder="Сумма (TON)" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
             <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 10px;">ВЫДАТЬ БАЛАНС</button>
-            <button onclick="adminResetAllData()" style="width:100%; padding:18px; background:var(--red); border:none; border-radius:15px; color:white; font-weight:900;">ОБНУЛИТЬ ВСЕХ ИГРОКОВ</button>
         </div>
-    </div>
-</div>
-
-<div id="scr-profile" class="screen">
-    <div class="profile-content">
-        <div class="profile-top-nav">
-            <div class="lang-btn" onclick="switchLang()" id="lang-toggle">🇷🇺</div>
-            <div style="font-weight: 900; letter-spacing: 1px;">ПРОФИЛЬ</div>
-            <div style="width:45px"></div>
-        </div>
-        <div class="avatar-circle"><img id="user-avatar" src="https://via.placeholder.com/110"></div>
-        <h2 class="user-title" id="display-name">Игрок</h2>
-        <div class="id-badge" onclick="copyId()">
-            <span style="color: #666; font-size: 14px;">ID: </span>
-            <span style="color: var(--blue); font-size: 14px; font-weight: bold;" id="user-id-val">...</span>
-        </div>
-        <div class="bal-card">
-            <div style="color:#555; font-size:12px; font-weight:bold; text-transform:uppercase;">Ваш баланс</div>
-            <div class="bal-val"><span style="color:var(--blue)">💎</span><span class="balance-view">...</span></div>
-        </div>
-        <div class="prof-btns">
-            <button class="p-btn p-blue">Пополнить</button>
-            <button class="p-btn p-trans">Вывести</button>
-        </div>
-
-        <h3 style="text-align:left; font-size:14px; color:#555; margin-left:10px;">ИНВЕНТАРЬ NFT</h3>
-        <div id="inventory-grid"></div>
     </div>
 </div>
 
@@ -222,12 +159,11 @@
         <span onclick="setMax()" style="color:var(--blue); font-weight:bold;">MAX</span>
     </div>
     <input type="number" id="bet-amount-input" value="0.1" step="0.1" min="0.1" style="width:100%; padding:18px; border-radius:15px; background:#0b0b0e; border:1px solid #333; color:white; font-size:22px; text-align:center; outline:none; box-sizing:border-box;">
-    <button id="confirm-bet-btn" onclick="confirmBet()" style="width:100%; margin-top:20px; padding:20px; border-radius:20px; background:var(--blue); border:none; color:white; font-weight:900; font-size:18px;">ПОДТВЕРДИТЬ</button>
+    <button onclick="confirmBet()" style="width:100%; margin-top:20px; padding:20px; border-radius:20px; background:var(--blue); border:none; color:white; font-weight:900; font-size:18px;">ПОДТВЕРДИТЬ</button>
 </div>
 
 <div class="nav-bar">
     <div class="nav-item active" onclick="switchScreen('crash', this)">🚀<span>Краш</span></div>
-    <div class="nav-item" onclick="switchScreen('mines', this)">💣<span>Мины</span></div>
     <div class="nav-item" id="nav-admin-btn" style="display:none;" onclick="switchScreen('admin', this)">⚙️<span>Админ</span></div>
     <div class="nav-item" onclick="switchScreen('profile', this)">👤<span>Профиль</span></div>
 </div>
@@ -252,31 +188,33 @@
     const userId = tg.initDataUnsafe.user?.id || "582845661";
     const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting";
-    let betLock = false, activeNFT = null;
+    let activeNFT = null;
 
+    // ОБНОВЛЕНИЕ ОНЛАЙНА (Рандомная имитация или из БД)
+    function updateOnline() {
+        const online = Math.floor(Math.random() * (140 - 110 + 1)) + 110;
+        document.getElementById('online-val').innerText = online;
+    }
+    setInterval(updateOnline, 5000);
+    updateOnline();
+
+    // БАЛАНС
     db.ref('users/' + userId + '/balance').on('value', snap => {
-        if(snap.val() === null) db.ref('users/' + userId).set({ balance: 10.00, name: userName });
-        else { balance = parseFloat(snap.val()); updateBalanceView(); }
+        balance = parseFloat(snap.val() || 0);
+        updateBalanceView();
     });
 
-    // --- ОБНОВЛЕННАЯ ОТРИСОВКА ИНВЕНТАРЯ ---
+    // ИНВЕНТАРЬ
     db.ref('users/' + userId + '/inventory').on('value', snap => {
         const grid = document.getElementById('inventory-grid');
         grid.innerHTML = "";
         const data = snap.val();
-
-        if(!data) {
-            grid.innerHTML = '<div class="inv-empty">Инвентарь пуст<br><span style="font-size:12px; opacity:0.5">Ловите NFT во время полета!</span></div>';
-        } else {
+        if(!data) grid.innerHTML = '<div style="grid-column: span 2; color:#444; padding:40px;">Нет NFT</div>';
+        else {
             Object.values(data).forEach(nft => {
                 const item = document.createElement('div');
                 item.className = 'inv-item';
-                item.innerHTML = `
-                    <div class="item-status">NFT</div>
-                    <img src="${nft.img}">
-                    <span>${nft.name}</span>
-                    <div class="item-rarity">COLLECTIBLE</div>
-                `;
+                item.innerHTML = `<img src="${nft.img}"><span>${nft.name}</span><div class="rarity">NFT ITEM</div>`;
                 grid.appendChild(item);
             });
         }
@@ -292,12 +230,13 @@
         document.getElementById('scr-' + id).classList.add('active');
         el.classList.add('active');
         if(id === 'profile') {
-            document.getElementById('user-id-val').innerText = userId;
+            document.getElementById('user-id-val').innerText = "ID: " + userId;
             document.getElementById('display-name').innerText = userName;
             if(userId == ADMIN_ID) document.getElementById('nav-admin-btn').style.display = 'flex';
         }
     }
 
+    // ИГРОВОЙ ЦИКЛ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
@@ -311,7 +250,7 @@
 
         if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
-                currentBet = 0; hasCashedOut = false; betLock = false; activeNFT = null;
+                currentBet = 0; hasCashedOut = false; activeNFT = null;
                 btn.disabled = false; btn.innerText = "Сделать ставку";
                 btn.classList.remove('win'); document.getElementById('mult').style.color = "white";
                 rocket.style.transform = "translate(0,0)";
@@ -321,9 +260,8 @@
             let off = Math.min((curMult - 1) * 45, 280);
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
 
-            let passedNFTs = NFT_DATABASE.filter(n => curMult >= n.targetX);
-            let found = passedNFTs[passedNFTs.length - 1];
-
+            // Проверка NFT
+            let found = NFT_DATABASE.filter(n => curMult >= n.targetX).pop();
             if(found && currentBet > 0 && !hasCashedOut) {
                 activeNFT = found;
                 document.getElementById('nft-preview-img').src = found.img;
@@ -333,22 +271,35 @@
 
             if(currentBet > 0 && !hasCashedOut) {
                 btn.innerText = `ЗАБРАТЬ ${(currentBet * curMult).toFixed(2)}`;
-                btn.classList.add('win'); btn.disabled = false;
+                btn.classList.add('win');
             }
         } else if(gameStatus === "crash") {
             document.getElementById('mult').style.color = "var(--red)";
-            btn.disabled = true; btn.innerText = "БУМ!";
+            btn.disabled = true; btn.innerText = "CRASH!";
             nftStage.classList.remove('visible');
-            if(currentBet > 0 && !hasCashedOut) {
-                db.ref('bets/' + userId).update({ status: "crash" });
-                hasCashedOut = true;
-            }
         }
+    });
+
+    // ИСТОРИЯ (ЦВЕТНАЯ)
+    db.ref('history').limitToLast(12).on('value', snap => {
+        const list = document.getElementById('history-list');
+        list.innerHTML = ""; const data = snap.val(); if(!data) return;
+        Object.values(data).reverse().forEach(v => {
+            const val = parseFloat(v);
+            const i = document.createElement('div');
+            let colorClass = "hist-low";
+            if(val >= 10) colorClass = "hist-high";
+            else if(val >= 2) colorClass = "hist-mid";
+
+            i.className = `history-item ${colorClass}`;
+            i.innerText = val.toFixed(2) + 'x';
+            list.appendChild(i);
+        });
     });
 
     function handleMainAction() {
         if(gameStatus === "flying" && currentBet > 0 && !hasCashedOut) handleCashOut();
-        else if(gameStatus === "waiting" && currentBet === 0) openBetMenu();
+        else if(gameStatus === "waiting") openBetMenu();
     }
 
     function openBetMenu() {
@@ -362,83 +313,36 @@
     function setMax() { document.getElementById('bet-amount-input').value = Math.floor(balance * 10) / 10; }
 
     function confirmBet() {
-        if(betLock || currentBet > 0 || gameStatus !== "waiting") return;
         let amt = parseFloat(document.getElementById('bet-amount-input').value);
-        if(isNaN(amt) || amt < 0.1) return tg.showAlert("Мин. ставка 0.1 TON");
-        if(balance < amt) return tg.showAlert("Недостаточно средств");
-
-        betLock = true; currentBet = amt;
+        if(balance < amt || amt < 0.1) return;
+        currentBet = amt;
         db.ref('users/' + userId + '/balance').set(balance - amt);
         db.ref('bets/' + userId).set({ name: userName, amount: amt, status: "playing" });
-        document.getElementById('bet-trigger').innerText = "СТАВКА ПРИНЯТА";
-        document.getElementById('bet-trigger').disabled = true;
         closeBetMenu();
+        document.getElementById('bet-trigger').innerText = "ОЖИДАНИЕ...";
+        document.getElementById('bet-trigger').disabled = true;
     }
 
     function handleCashOut() {
-        if(hasCashedOut || gameStatus !== "flying" || currentBet === 0) return;
+        if(hasCashedOut) return;
         hasCashedOut = true;
-        let m = parseFloat(document.getElementById('mult').innerText);
-        let win = currentBet * m;
-
+        let win = currentBet * parseFloat(document.getElementById('mult').innerText);
         db.ref('users/' + userId + '/balance').transaction(curr => (curr || 0) + win);
+        if(activeNFT) db.ref('users/' + userId + '/inventory').push(activeNFT);
 
-        if(activeNFT) {
-            db.ref('users/' + userId + '/inventory').push(activeNFT);
-            tg.showAlert(`🔥 ПОБЕДА!\nСумма: ${win.toFixed(2)} TON\nПодарок: ${activeNFT.name}`);
-        } else {
-            tg.showAlert(`Вы забрали ${win.toFixed(2)} TON`);
-        }
-
-        db.ref('bets/' + userId).update({ status: "win", out: m });
-        const btn = document.getElementById('bet-trigger');
-        btn.innerText = "ВЫ ЗАБРАЛИ!"; btn.classList.remove('win'); btn.disabled = true;
+        tg.showAlert(activeNFT ? `🔥 ВЫИГРЫШ: ${win.toFixed(2)} TON + NFT!` : `💰 ЗАБРАЛИ: ${win.toFixed(2)} TON`);
+        document.getElementById('bet-trigger').innerText = "ЗАБРАНО!";
+        document.getElementById('bet-trigger').disabled = true;
     }
 
     function adminGiveBalance() {
         const tId = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
-        if(!tId || isNaN(amt)) return;
         db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt);
-        tg.showAlert("Баланс пополнен!");
+        tg.showAlert("Выдано!");
     }
 
-    function adminResetAllData() {
-        if(confirm("ОПАСНО: Вы уверены, что хотите ОБНУЛИТЬ всех?")) {
-            db.ref('users').once('value', snapshot => {
-                const users = snapshot.val(); if(!users) return;
-                const updates = {};
-                Object.keys(users).forEach(uid => {
-                    updates[`users/${uid}/balance`] = 0.00;
-                    updates[`users/${uid}/inventory`] = null;
-                });
-                db.ref().update(updates).then(() => tg.showAlert("Обнулено."));
-            });
-        }
-    }
-
-    db.ref('history').limitToLast(12).on('value', snap => {
-        const list = document.getElementById('history-list');
-        list.innerHTML = ""; const data = snap.val(); if(!data) return;
-        Object.values(data).reverse().forEach(v => {
-            const i = document.createElement('div');
-            i.className = 'history-item';
-            i.innerText = parseFloat(v).toFixed(2) + 'x';
-            list.appendChild(i);
-        });
-    });
-
-    db.ref('bets').on('value', snap => {
-        const list = document.getElementById('bets-list');
-        list.innerHTML = ""; const data = snap.val(); if(!data) return;
-        Object.values(data).forEach(b => {
-            const card = document.createElement('div');
-            card.className = 'bet-card';
-            card.innerHTML = `<div><span class="u-name">${b.name}</span></div><div style="font-weight:900;">${b.amount} TON</div>`;
-            list.appendChild(card);
-        });
-    });
-
+    // ЛОАДЕР
     let p = 0; let l = setInterval(() => {
         p += 20; document.getElementById('f-line').style.width = p + '%';
         if(p >= 100) { clearInterval(l); setTimeout(() => { document.getElementById('loader').style.display='none'; }, 400); }
