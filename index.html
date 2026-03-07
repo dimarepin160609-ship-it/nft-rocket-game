@@ -28,9 +28,17 @@
         .balance-badge { background: #1c1c21; padding: 6px 14px; border-radius: 50px; font-weight: bold; border: 1px solid #333; display: flex; align-items: center; gap: 6px; }
         .history-row { display: flex; gap: 8px; padding: 5px 15px 15px; overflow-x: auto; scrollbar-width: none; min-height: 35px; }
         .history-item { background: #1c1c21; padding: 4px 14px; border-radius: 50px; font-size: 12px; font-weight: bold; border: 1px solid #222; min-width: 45px; text-align: center; }
+
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
         #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; }
         #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
+
+        /* NFT PREVIEW */
+        #nft-stage { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); opacity: 0; transition: 0.5s ease; text-align: center; z-index: 1; pointer-events: none; }
+        #nft-stage.visible { opacity: 0.6; transform: translate(-50%, -55%) scale(1.1); }
+        #nft-stage img { width: 100px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        #nft-stage div { font-size: 12px; font-weight: 900; color: var(--blue); margin-top: 5px; text-transform: uppercase; }
+
         #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 260px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
         .bets-header { padding: 12px; text-align: center; color: #555; font-size: 13px; border-bottom: 1px solid #1c1c21; }
         #bets-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
@@ -41,6 +49,12 @@
         #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; }
         #bet-trigger.win { background: var(--green); }
         #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
+
+        /* ИНВЕНТАРЬ */
+        #inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; margin-top: 15px; }
+        .inv-item { background: var(--card); border: 1px solid #1c1c21; border-radius: 15px; padding: 10px; text-align: center; }
+        .inv-item img { width: 50px; height: 50px; object-fit: contain; }
+        .inv-item span { display: block; font-size: 10px; color: #666; margin-top: 5px; white-space: nowrap; overflow: hidden; }
 
         /* ПРОФИЛЬ */
         .profile-content { padding: 20px; text-align: center; flex-grow: 1; overflow-y: auto; }
@@ -83,6 +97,10 @@
     </div>
     <div class="history-row" id="history-list"></div>
     <div id="game-zone">
+        <div id="nft-stage">
+            <img id="nft-preview-img" src="">
+            <div id="nft-preview-name">NFT NAME</div>
+        </div>
         <h1 id="mult">1.00x</h1>
         <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
     </div>
@@ -138,7 +156,11 @@
             <button class="p-btn p-blue" id="txt-deposit">Пополнить</button>
             <button class="p-btn p-trans" id="txt-withdraw">Вывести</button>
         </div>
-        <div class="inv-empty" id="txt-inv">Инвентарь пуст</div>
+
+        <h3 style="text-align:left; font-size:14px; color:#555; margin-left:10px;">ИНВЕНТАРЬ NFT</h3>
+        <div id="inventory-grid">
+            <div class="inv-empty" id="txt-inv">Инвентарь пуст</div>
+        </div>
     </div>
 </div>
 
@@ -166,22 +188,39 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // --- НАСТРОЙКИ ---
-    const ADMIN_ID = 1929021302;
-    // -----------------
+    // --- БАЗА NFT (ЦЕНЫ ИЗ TONNEL) ---
+    const NFT_DATABASE = [
+        { name: "Vintage Cigar", price: 50, img: "https://i.ibb.co/v4m0Yv8/cigar.png" },
+        { name: "Genie Lamp", price: 45, img: "https://i.ibb.co/mS7YFmG/genie.png" },
+        { name: "Perfume Bottle", price: 88, img: "https://i.ibb.co/kBQzS8C/perfume.png" },
+        { name: "Lollipop", price: 300, img: "https://i.ibb.co/Vv9rZzN/lolli.png" },
+        { name: "Cherry", price: 250, img: "https://i.ibb.co/S7qM1zF/cherry.png" }
+    ];
 
+    const ADMIN_ID = 1929021302;
     const userId = tg.initDataUnsafe.user?.id || "id_" + Math.random().toString(36).substr(2, 5);
     const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting", currentLang = 'ru';
-    let betLock = false;
+    let betLock = false, activeNFT = null;
 
-    // Подписка на баланс в Firebase
     db.ref('users/' + userId + '/balance').on('value', snap => {
-        if(snap.val() === null) {
-            db.ref('users/' + userId).set({ balance: 10.00, name: userName });
-        } else {
-            balance = parseFloat(snap.val());
-            updateBalanceView();
+        if(snap.val() === null) db.ref('users/' + userId).set({ balance: 10.00, name: userName });
+        else { balance = parseFloat(snap.val()); updateBalanceView(); }
+    });
+
+    // Инвентарь
+    db.ref('users/' + userId + '/inventory').on('value', snap => {
+        const grid = document.getElementById('inventory-grid');
+        grid.innerHTML = "";
+        const data = snap.val();
+        if(!data) grid.innerHTML = '<div class="inv-empty">Инвентарь пуст</div>';
+        else {
+            Object.values(data).forEach(nft => {
+                const item = document.createElement('div');
+                item.className = 'inv-item';
+                item.innerHTML = `<img src="${nft.img}"><span>${nft.name}</span>`;
+                grid.appendChild(item);
+            });
         }
     });
 
@@ -218,32 +257,13 @@
         const amt = parseFloat(document.getElementById('adm-amount').value);
         if(!tId || isNaN(amt)) return tg.showAlert("Укажите ID и сумму!");
         db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt)
-        .then(() => tg.showAlert(`Выдано ${amt} TON игроку ${tId}`))
-        .catch(e => tg.showAlert("Ошибка: " + e.message));
+        .then(() => tg.showAlert(`Выдано ${amt} TON игроку ${tId}`));
     }
 
     function switchLang() {
         currentLang = (currentLang === 'ru') ? 'en' : 'ru';
         const btn = document.getElementById('lang-toggle');
-        if(currentLang === 'en') {
-            btn.innerText = '🇺🇸';
-            updateLangUI('PROFILE', 'ID: ', 'Your balance', 'Deposit', 'Withdraw', 'Inventory is empty', 'Crash', 'Mines', 'Profile');
-        } else {
-            btn.innerText = '🇷🇺';
-            updateLangUI('ПРОФИЛЬ', 'ID: ', 'Ваш баланс', 'Пополнить', 'Вывести', 'Инвентарь пуст', 'Краш', 'Мины', 'Профиль');
-        }
-    }
-
-    function updateLangUI(p, idLabel, b, d, w, i, n1, n3, n4) {
-        document.getElementById('txt-profile-title').innerText = p;
-        document.getElementById('txt-id-label').innerText = idLabel;
-        document.getElementById('txt-bal-label').innerText = b;
-        document.getElementById('txt-deposit').innerText = d;
-        document.getElementById('txt-withdraw').innerText = w;
-        document.getElementById('txt-inv').innerText = i;
-        document.getElementById('nav-crash').innerText = n1;
-        document.getElementById('nav-mines').innerText = n3;
-        document.getElementById('nav-profile').innerText = n4;
+        btn.innerText = currentLang === 'en' ? '🇺🇸' : '🇷🇺';
     }
 
     function updateBalanceView() {
@@ -251,43 +271,48 @@
     }
 
     // ИГРОВАЯ ЛОГИКА
-    db.ref('history').limitToLast(12).on('value', snap => {
-        const list = document.getElementById('history-list');
-        list.innerHTML = ""; const data = snap.val(); if(!data) return;
-        Object.values(data).reverse().forEach(v => {
-            const i = document.createElement('div');
-            i.className = 'history-item';
-            const n = parseFloat(v);
-            i.style.color = n < 1.5 ? '#3498db' : n < 2.5 ? 'var(--green)' : '#9b59b6';
-            i.innerText = n.toFixed(2) + 'x';
-            list.appendChild(i);
-        });
-    });
-
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
         gameStatus = data.status;
-        document.getElementById('mult').innerText = data.multiplier.toFixed(2) + "x";
+        const curMult = data.multiplier;
+        document.getElementById('mult').innerText = curMult.toFixed(2) + "x";
+
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
+        const nftStage = document.getElementById('nft-stage');
+
         if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
-                currentBet = 0; hasCashedOut = false; betLock = false;
+                currentBet = 0; hasCashedOut = false; betLock = false; activeNFT = null;
                 btn.disabled = false; btn.innerText = "Сделать ставку";
                 btn.classList.remove('win'); document.getElementById('mult').style.color = "white";
                 rocket.style.transform = "translate(0,0)";
+                nftStage.classList.remove('visible');
             }
         } else if(gameStatus === "flying") {
-            let off = Math.min((data.multiplier - 1) * 45, 280);
+            let off = Math.min((curMult - 1) * 45, 280);
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
+
+            // ЛОГИКА NFT
             if(currentBet > 0 && !hasCashedOut) {
-                btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
+                let currentPotential = currentBet * curMult;
+                let found = NFT_DATABASE.filter(n => n.price <= currentPotential).sort((a,b) => b.price - a.price)[0];
+
+                if(found) {
+                    activeNFT = found;
+                    document.getElementById('nft-preview-img').src = found.img;
+                    document.getElementById('nft-preview-name').innerText = found.name;
+                    nftStage.classList.add('visible');
+                }
+
+                btn.innerText = `ЗАБРАТЬ ${(currentBet * curMult).toFixed(2)}`;
                 btn.classList.add('win'); btn.disabled = false;
             }
         } else if(gameStatus === "crash") {
             document.getElementById('mult').style.color = "var(--red)";
             btn.disabled = true; btn.innerText = "БУМ!";
+            nftStage.classList.remove('visible');
             if(currentBet > 0 && !hasCashedOut) {
                 db.ref('bets/' + userId).update({ status: "crash" });
                 hasCashedOut = true;
@@ -327,11 +352,31 @@
         if(hasCashedOut || gameStatus !== "flying" || currentBet === 0) return;
         hasCashedOut = true;
         let m = parseFloat(document.getElementById('mult').innerText);
-        db.ref('users/' + userId + '/balance').set(balance + (currentBet * m));
+        let win = currentBet * m;
+
+        db.ref('users/' + userId + '/balance').transaction(curr => (curr || 0) + win);
+
+        // ВЫДАЧА NFT
+        if(activeNFT) {
+            db.ref('users/' + userId + '/inventory').push(activeNFT);
+            tg.showAlert(`Победа! Вы получили ${win.toFixed(2)} TON и NFT: ${activeNFT.name}`);
+        }
+
         db.ref('bets/' + userId).update({ status: "win", out: m });
         const btn = document.getElementById('bet-trigger');
         btn.innerText = "ВЫ ЗАБРАЛИ!"; btn.classList.remove('win'); btn.disabled = true;
     }
+
+    db.ref('history').limitToLast(12).on('value', snap => {
+        const list = document.getElementById('history-list');
+        list.innerHTML = ""; const data = snap.val(); if(!data) return;
+        Object.values(data).reverse().forEach(v => {
+            const i = document.createElement('div');
+            i.className = 'history-item';
+            i.innerText = parseFloat(v).toFixed(2) + 'x';
+            list.appendChild(i);
+        });
+    });
 
     db.ref('bets').on('value', snap => {
         const list = document.getElementById('bets-list');
@@ -339,10 +384,7 @@
         Object.values(data).forEach(b => {
             const card = document.createElement('div');
             card.className = 'bet-card';
-            let sTxt = "В игре", sClr = "var(--blue)", valTxt = `${b.amount} TON`;
-            if(b.status === "win") { sTxt = `${b.out.toFixed(2)}x`; sClr = "var(--green)"; valTxt = `+${(b.amount * b.out).toFixed(2)} TON`; }
-            else if(b.status === "crash") { sTxt = "БУМ"; sClr = "var(--red)"; valTxt = `-${b.amount} TON`; }
-            card.innerHTML = `<div><span class="u-name">${b.name}</span><span class="u-stat" style="color:${sClr}">${sTxt}</span></div><div style="font-weight:900; align-self:center; font-size:14px;">${valTxt}</div>`;
+            card.innerHTML = `<div><span class="u-name">${b.name}</span></div><div style="font-weight:900;">${b.amount} TON</div>`;
             list.appendChild(card);
         });
     });
