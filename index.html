@@ -24,7 +24,6 @@
         .online-badge { background: rgba(46, 204, 113, 0.1); color: var(--green); padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: bold; border: 1px solid rgba(46, 204, 113, 0.2); }
         .balance-badge { background: #1c1c21; padding: 6px 14px; border-radius: 50px; font-weight: bold; border: 1px solid #333; display: flex; align-items: center; gap: 6px; }
 
-        /* КРАСИВАЯ ИСТОРИЯ */
         .history-row { display: flex; gap: 8px; padding: 5px 15px 15px; overflow-x: auto; scrollbar-width: none; min-height: 35px; }
         .history-item { padding: 4px 14px; border-radius: 50px; font-size: 12px; font-weight: 900; border: 1px solid #222; min-width: 45px; text-align: center; background: #1c1c21; }
         .h-low { color: var(--red); border-color: rgba(231,76,60,0.3); }
@@ -33,7 +32,6 @@
 
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
 
-        /* КРАСИВЫЙ ЦЕНТРАЛЬНЫЙ ИКС */
         #mult { font-size: 75px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; text-shadow: 0 0 20px rgba(0,136,204,0.3); transition: transform 0.1s ease-out; }
         .pulse { transform: scale(1.05); }
 
@@ -200,7 +198,6 @@
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting", curLang = 'RU';
     let betLock = false, activeNFT = null;
 
-    // --- 1. РЕАЛЬНЫЙ ОНЛАЙН ЧЕРЕЗ PRESENCE ---
     const onlineRef = db.ref('presence/' + userId);
     onlineRef.set(true);
     onlineRef.onDisconnect().remove();
@@ -208,7 +205,6 @@
         document.getElementById('online-val').innerText = snap.numChildren();
     });
 
-    // --- 2. СИСТЕМА ЯЗЫКОВ ---
     const langData = {
         RU: { crash: "Краш", mines: "Мины", prof: "Профиль", inv: "ИНВЕНТАРЬ NFT", bal: "Ваш баланс", dep: "Пополнить", out: "Вывести", sum: "Сумма (TON)", all: "Все ставки", btn: "Сделать ставку", soon: "Скоро открытие...", confirm: "ПОДТВЕРДИТЬ" },
         EN: { crash: "Crash", mines: "Mines", prof: "Profile", inv: "NFT INVENTORY", bal: "Your Balance", dep: "Deposit", out: "Withdraw", sum: "Amount (TON)", all: "All Bets", btn: "Place Bet", soon: "Coming soon...", confirm: "CONFIRM" }
@@ -279,7 +275,6 @@
         const oldVal = parseFloat(multEl.innerText);
         multEl.innerText = curMult.toFixed(2) + "x";
 
-        // --- 3. КРАСИВЫЙ ЦЕНТРАЛЬНЫЙ ИКС (ПУЛЬСАЦИЯ) ---
         if(curMult > oldVal) {
             multEl.classList.add('pulse');
             setTimeout(() => multEl.classList.remove('pulse'), 100);
@@ -291,11 +286,15 @@
 
         if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
+                // ПРАВКА 1: Очистка ставок при новом раунде
+                db.ref('bets').remove();
+
                 currentBet = 0; hasCashedOut = false; betLock = false; activeNFT = null;
                 btn.disabled = false; btn.innerText = langData[curLang].btn;
                 btn.classList.remove('win'); multEl.style.color = "white";
                 rocket.style.transform = "translate(0,0)";
                 nftStage.classList.remove('visible');
+                document.getElementById('bets-list').innerHTML = "";
             }
         } else if(gameStatus === "flying") {
             let off = Math.min((curMult - 1) * 45, 280);
@@ -343,12 +342,28 @@
         if(isNaN(amt) || amt < 0.1) return;
         if(balance < amt) return;
 
-        betLock = true; currentBet = amt;
-        db.ref('users/' + userId + '/balance').set(balance - amt);
-        db.ref('bets/' + userId).set({ name: userName, amount: amt, status: "playing" });
-        document.getElementById('bet-trigger').innerText = "...";
-        document.getElementById('bet-trigger').disabled = true;
-        closeBetMenu();
+        betLock = true;
+        const confirmBtn = document.getElementById('confirm-bet-btn');
+        confirmBtn.disabled = true;
+
+        // ПРАВКА 2: Защита от двойной ставки с двух устройств
+        db.ref('bets/' + userId).once('value').then(snap => {
+            if (snap.exists() && snap.val().status === "playing") {
+                tg.showAlert("Ставка уже сделана!");
+                betLock = false;
+                confirmBtn.disabled = false;
+                closeBetMenu();
+                return;
+            }
+
+            db.ref('users/' + userId + '/balance').set(balance - amt).then(() => {
+                db.ref('bets/' + userId).set({ name: userName, amount: amt, status: "playing" });
+                currentBet = amt;
+                document.getElementById('bet-trigger').innerText = "...";
+                document.getElementById('bet-trigger').disabled = true;
+                closeBetMenu();
+            });
+        }).catch(() => { betLock = false; confirmBtn.disabled = false; });
     }
 
     function handleCashOut() {
@@ -364,7 +379,6 @@
         document.getElementById('bet-trigger').disabled = true;
     }
 
-    // --- 3. КРАСИВЫЕ КОЭФФИЦИЕНТЫ (ИСТОРИЯ) ---
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
         list.innerHTML = ""; const data = snap.val(); if(!data) return;
