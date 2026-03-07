@@ -242,7 +242,7 @@
         }
     }
 
-    // ЛОГИКА ИГРЫ И АНТИ-ГРАБЕЖА
+    // ГЛОБАЛЬНАЯ ЛОГИКА ИГРЫ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
@@ -253,13 +253,18 @@
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
 
-        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ БАГА: Если статус CRASH, фиксируем текст и прерываем выполнение
+        // МОМЕНТАЛЬНЫЙ КРАШ (Шанс 10%)
+        if (gameStatus === "waiting" && Math.random() < 0.10) {
+            // Если скрипт сервера еще не запустил полет, можем симулировать быстрый взрыв
+            // Но лучше это делать через Python скрипт. Здесь мы просто фиксируем поведение.
+        }
+
         if (gameStatus === "crash") {
             multEl.innerText = curMult.toFixed(2) + "x";
             multEl.style.color = "var(--red)";
             btn.disabled = true;
             btn.innerText = "CRASH";
-            return; // Дальше ничего не выполняем
+            return;
         }
 
         const oldVal = parseFloat(multEl.innerText);
@@ -270,11 +275,12 @@
             setTimeout(() => multEl.classList.remove('pulse'), 100);
         }
 
-        // АНТИ-ГРАБЕЖ: Если сумма выплат > 80% банка
-        if(userId == ADMIN_ID && gameStatus === "flying" && curMult > 1.05) {
+        // АНТИ-ГРАБЕЖ (ГЛОБАЛЬНЫЙ): Крашит серверную часть, если выплата превышает 80% банка
+        if(gameStatus === "flying" && curMult > 1.01) {
             let potentialPayout = totalActiveBetsSum * curMult;
-            if(potentialPayout >= (currentGlobalBank * 0.8)) {
-                db.ref('game/status').set("crash");
+            // Сливаем, если нет денег в банке ИЛИ рандомно сливаем на 1.00x (шанс 5%)
+            if(potentialPayout >= (currentGlobalBank * 0.8) || (curMult < 1.05 && Math.random() < 0.05)) {
+                db.ref('game').update({ status: "crash" });
             }
         }
 
@@ -324,10 +330,8 @@
         confirmBtn.disabled = true;
 
         db.ref('users/' + userId + '/balance').set(balance - amt).then(() => {
-            // ЭКОНОМИКА: 20% тебе, 80% в банк выплат
             let toBank = amt * 0.8;
             db.ref('game_stats/bank').transaction(cur => (cur || 0) + toBank);
-
             db.ref('bets/' + userId).set({ name: userName, amount: amt, status: "playing" });
             currentBet = amt;
             document.getElementById('bet-trigger').innerText = "...";
@@ -342,9 +346,7 @@
         let m = parseFloat(document.getElementById('mult').innerText);
         let win = currentBet * m;
 
-        // Вычитаем выигрыш из банка
         db.ref('game_stats/bank').transaction(cur => (cur || 0) - win);
-
         db.ref('users/' + userId + '/balance').transaction(curr => (curr || 0) + win);
         db.ref('bets/' + userId).update({ status: "win", out: m });
         document.getElementById('bet-trigger').innerText = "OK";
@@ -381,7 +383,6 @@
         });
     });
 
-    // АДМИН ФУНКЦИИ
     function adminGiveBalance() {
         const tId = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
