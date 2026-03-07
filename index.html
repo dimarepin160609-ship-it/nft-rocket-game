@@ -33,7 +33,8 @@
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
         #mult { font-size: 75px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; text-shadow: 0 0 20px rgba(0,136,204,0.3); transition: transform 0.1s ease-out; }
         .pulse { transform: scale(1.05); }
-        #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
+        /* ФИКС: Плавный переход для ракеты, чтобы не дергалась */
+        #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.15s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
 
         #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 260px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
         .bets-header { padding: 12px; text-align: center; color: #555; font-size: 13px; border-bottom: 1px solid #1c1c21; }
@@ -45,6 +46,7 @@
         #bet-trigger.win { background: var(--green); }
         #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
 
+        /* ... стили профиля без изменений ... */
         .profile-content { padding: 20px; text-align: center; flex-grow: 1; overflow-y: auto; }
         .profile-top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .lang-btn { background: #1c1c21; border: 1px solid #333; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
@@ -110,13 +112,10 @@
             <button onclick="adminResetBank()" style="width:100%; padding:12px; background:#222; border:1px solid #444; border-radius:10px; color:white; font-size:11px; margin-top:10px; font-weight:bold;">ОБНУЛИТЬ БАНК</button>
         </div>
         <div class="bal-card">
-            <p style="font-size:12px; color:#666;">ID ЦЕЛИ</p>
             <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
-            <p style="font-size:12px; color:#666;">СУММА (TON)</p>
             <input type="number" id="adm-amount" placeholder="10.0" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center;">
             <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 10px;">ВЫДАТЬ БАЛАНС</button>
             <button onclick="adminResetTargetBalance()" style="width:100%; padding:18px; background:#f39c12; border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 25px;">ОБНУЛИТЬ ИГРОКА (ID)</button>
-            <div style="height: 1px; background: #333; margin-bottom: 20px;"></div>
             <button onclick="adminResetAllData()" style="width:100%; padding:18px; background:var(--red); border:none; border-radius:15px; color:white; font-weight:900;">ОБНУЛИТЬ ВСЕХ ИГРОКОВ</button>
         </div>
     </div>
@@ -179,6 +178,7 @@
     let currentGlobalBank = 0;
     let totalActiveBetsSum = 0;
 
+    // ... загрузка банка и присутствия ...
     db.ref('game_stats/bank').on('value', snap => {
         currentGlobalBank = parseFloat(snap.val() || 0);
         if(document.getElementById('adm-bank-val')) {
@@ -202,18 +202,12 @@
         curLang = (curLang === 'RU') ? 'EN' : 'RU';
         document.getElementById('lang-toggle').innerText = (curLang === 'RU') ? '🇷🇺' : '🇬🇧';
         const d = langData[curLang];
-        document.getElementById('nav-c').innerText = d.crash;
-        document.getElementById('nav-m').innerText = d.mines;
-        document.getElementById('nav-p').innerText = d.prof;
-        document.getElementById('profile-header-title').innerText = d.prof;
-        document.getElementById('bal-label').innerText = d.bal;
-        document.getElementById('btn-dep').innerText = d.dep;
-        document.getElementById('btn-out').innerText = d.out;
-        document.getElementById('sum-label').innerText = d.sum;
-        document.getElementById('bets-count-title').innerText = d.all;
-        document.getElementById('mines-title').innerText = d.mines;
-        document.getElementById('mines-soon').innerText = d.soon;
-        document.getElementById('confirm-bet-btn').innerText = d.confirm;
+        document.getElementById('nav-c').innerText = d.crash; document.getElementById('nav-m').innerText = d.mines;
+        document.getElementById('nav-p').innerText = d.prof; document.getElementById('profile-header-title').innerText = d.prof;
+        document.getElementById('bal-label').innerText = d.bal; document.getElementById('btn-dep').innerText = d.dep;
+        document.getElementById('btn-out').innerText = d.out; document.getElementById('sum-label').innerText = d.sum;
+        document.getElementById('bets-count-title').innerText = d.all; document.getElementById('mines-title').innerText = d.mines;
+        document.getElementById('mines-soon').innerText = d.soon; document.getElementById('confirm-bet-btn').innerText = d.confirm;
         if(gameStatus === "waiting") document.getElementById('bet-trigger').innerText = d.btn;
     }
 
@@ -222,9 +216,7 @@
         else { balance = parseFloat(snap.val()); updateBalanceView(); }
     });
 
-    function updateBalanceView() {
-        document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2));
-    }
+    function updateBalanceView() { document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2)); }
 
     function switchScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -238,45 +230,44 @@
         }
     }
 
-    // ЛОГИКА ИГРЫ С ПОЛНЫМ ФИКС СЛИВА ДЛЯ ВСЕХ
+    // ЛОГИКА ИГРЫ С ФИКСАМИ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
         gameStatus = data.status;
-        const curMult = data.multiplier;
+
+        // ФИКС 1.60000005: Округляем входящее значение
+        const rawMult = parseFloat(data.multiplier || 1.00);
+        const curMult = Math.round(rawMult * 100) / 100;
 
         const multEl = document.getElementById('mult');
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
 
-        // 1. ПРОВЕРКА БАНКА (АНТИ-ГРАБЕЖ ГЛОБАЛЬНЫЙ)
-        // Если летим, проверяем: может ли банк выплатить всем текущим игрокам?
+        // 1. ПРОВЕРКА БАНКА (RTP 80%)
+        // ФИКС: Сначала проверяем на краш, чтобы ракета не успела пролететь лишнее
         if (gameStatus === "flying" && totalActiveBetsSum > 0) {
             let potentialPayout = totalActiveBetsSum * curMult;
-            // Если выплата > 80% банка, принудительно ставим КРАШ в Firebase для ВСЕХ
             if (potentialPayout >= (currentGlobalBank * 0.8)) {
                 db.ref('game/status').set("crash");
-                return; // Останавливаем выполнение здесь, ждем обновления от Firebase
+                return;
             }
         }
 
-        // 2. ОБРАБОТКА КРАША (Заморозка интерфейса)
+        // 2. ОБРАБОТКА КРАША
         if (gameStatus === "crash") {
             multEl.innerText = curMult.toFixed(2) + "x";
             multEl.style.color = "var(--red)";
             btn.disabled = true;
             btn.innerText = "CRASH";
+            // Остановка ракеты точно в месте краша
+            let stopOff = Math.min((curMult - 1) * 45, 280);
+            rocket.style.transform = `translate(${stopOff}px, -${stopOff}px) rotate(-15deg)`;
             return;
         }
 
         // 3. ОБЫЧНЫЙ ПОЛЕТ
-        const oldVal = parseFloat(multEl.innerText);
         multEl.innerText = curMult.toFixed(2) + "x";
-
-        if(curMult > oldVal) {
-            multEl.classList.add('pulse');
-            setTimeout(() => multEl.classList.remove('pulse'), 100);
-        }
 
         if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
@@ -292,7 +283,9 @@
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
 
             if(currentBet > 0 && !hasCashedOut) {
-                btn.innerText = (curLang === 'RU' ? 'ЗАБРАТЬ ' : 'TAKE ') + (currentBet * curMult).toFixed(2);
+                // ФИКС: Округляем отображаемый выигрыш
+                let currentWin = Math.floor(currentBet * curMult * 100) / 100;
+                btn.innerText = (curLang === 'RU' ? 'ЗАБРАТЬ ' : 'TAKE ') + currentWin.toFixed(2);
                 btn.classList.add('win'); btn.disabled = false;
             }
         }
@@ -316,16 +309,12 @@
     function confirmBet() {
         if(betLock || currentBet > 0 || gameStatus !== "waiting") return;
         let amt = parseFloat(document.getElementById('bet-amount-input').value);
-        if(isNaN(amt) || amt < 0.1) return;
-        if(balance < amt) return;
+        if(isNaN(amt) || amt < 0.1 || balance < amt) return;
 
         betLock = true;
-        const confirmBtn = document.getElementById('confirm-bet-btn');
-        confirmBtn.disabled = true;
-
-        db.ref('users/' + userId + '/balance').set(balance - amt).then(() => {
+        db.ref('users/' + userId + '/balance').set(Math.round((balance - amt) * 100) / 100).then(() => {
             let toBank = amt * 0.8;
-            db.ref('game_stats/bank').transaction(cur => (cur || 0) + toBank);
+            db.ref('game_stats/bank').transaction(cur => Math.round(((cur || 0) + toBank) * 100) / 100);
             db.ref('bets/' + userId).set({ name: userName, amount: amt, status: "playing" });
             currentBet = amt;
             document.getElementById('bet-trigger').innerText = "...";
@@ -338,25 +327,24 @@
         if(hasCashedOut || gameStatus !== "flying" || currentBet === 0) return;
         hasCashedOut = true;
         let m = parseFloat(document.getElementById('mult').innerText);
-        let win = currentBet * m;
+        let win = Math.floor(currentBet * m * 100) / 100;
 
-        db.ref('game_stats/bank').transaction(cur => (cur || 0) - win);
-        db.ref('users/' + userId + '/balance').transaction(curr => (curr || 0) + win);
+        db.ref('game_stats/bank').transaction(cur => Math.round(((cur || 0) - win) * 100) / 100);
+        db.ref('users/' + userId + '/balance').transaction(curr => Math.round(((curr || 0) + win) * 100) / 100);
         db.ref('bets/' + userId).update({ status: "win", out: m });
         document.getElementById('bet-trigger').innerText = "OK";
         document.getElementById('bet-trigger').classList.remove('win');
         document.getElementById('bet-trigger').disabled = true;
     }
 
+    // ... история и список ставок без изменений ...
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
         list.innerHTML = ""; const data = snap.val(); if(!data) return;
         Object.values(data).reverse().forEach(v => {
             const i = document.createElement('div');
             const val = parseFloat(v);
-            let cls = 'h-mid';
-            if(val < 2) cls = 'h-low';
-            else if(val >= 10) cls = 'h-high';
+            let cls = (val < 2) ? 'h-low' : (val >= 10 ? 'h-high' : 'h-mid');
             i.className = `history-item ${cls}`;
             i.innerText = val.toFixed(2) + 'x';
             list.appendChild(i);
@@ -365,8 +353,7 @@
 
     db.ref('bets').on('value', snap => {
         const list = document.getElementById('bets-list');
-        list.innerHTML = "";
-        totalActiveBetsSum = 0;
+        list.innerHTML = ""; totalActiveBetsSum = 0;
         const data = snap.val(); if(!data) return;
         Object.values(data).forEach(b => {
             if(b.status === "playing") totalActiveBetsSum += b.amount;
@@ -377,39 +364,24 @@
         });
     });
 
+    // Админ функции
     function adminGiveBalance() {
         const tId = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
-        db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt);
+        db.ref('users/' + tId + '/balance').transaction(curr => Math.round(((curr || 0) + amt) * 100) / 100);
     }
-
     function adminResetTargetBalance() {
         const tId = document.getElementById('adm-target-id').value;
-        if (!tId) { tg.showAlert("Введите ID игрока!"); return; }
-        if (confirm("Обнулить баланс игрока " + tId + "?")) {
-            db.ref('users/' + tId + '/balance').set(0.00).then(() => {
-                tg.showAlert("Баланс игрока " + tId + " сброшен.");
-            });
-        }
+        if (confirm("Обнулить баланс игрока " + tId + "?")) db.ref('users/' + tId + '/balance').set(0.00);
     }
-
     function adminResetAllData() {
-        if(confirm("ОБНУЛИТЬ ВСЕХ?")) {
-            db.ref('users').once('value', (s) => {
-                const updates = {};
-                Object.keys(s.val() || {}).forEach(uid => {
-                    updates[`users/${uid}/balance`] = 0.00;
-                });
-                db.ref().update(updates);
-            });
-        }
+        if(confirm("ОБНУЛИТЬ ВСЕХ?")) db.ref('users').once('value', s => {
+            const updates = {};
+            Object.keys(s.val() || {}).forEach(uid => updates[`users/${uid}/balance`] = 0.00);
+            db.ref().update(updates);
+        });
     }
-
-    function adminResetBank() {
-        if(confirm("СБРОСИТЬ ИГРОВОЙ БАНК?")) {
-            db.ref('game_stats/bank').set(0);
-        }
-    }
+    function adminResetBank() { if(confirm("СБРОСИТЬ БАНК?")) db.ref('game_stats/bank').set(0); }
 
     let p = 0; let l = setInterval(() => {
         p += 20; document.getElementById('f-line').style.width = p + '%';
