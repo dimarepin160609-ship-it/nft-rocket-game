@@ -127,7 +127,8 @@
             <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
             <p style="font-size:12px; color:#666;">СУММА (TON)</p>
             <input type="number" id="adm-amount" placeholder="10.0" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center;">
-            <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900;">ВЫДАТЬ БАЛАНС</button>
+            <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 10px;">ВЫДАТЬ БАЛАНС</button>
+            <button onclick="adminResetAllData()" style="width:100%; padding:18px; background:var(--red); border:none; border-radius:15px; color:white; font-weight:900;">ОБНУЛИТЬ ВСЕХ ИГРОКОВ</button>
         </div>
     </div>
 </div>
@@ -261,9 +262,8 @@
             let off = Math.min((curMult - 1) * 45, 280);
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
 
-            // ЛОГИКА ПОДАРКОВ: Фильтруем те, что пролетели
             let passedNFTs = NFT_DATABASE.filter(n => curMult >= n.targetX);
-            let found = passedNFTs[passedNFTs.length - 1]; // Берем самый "свежий"
+            let found = passedNFTs[passedNFTs.length - 1];
 
             if(found && currentBet > 0 && !hasCashedOut) {
                 activeNFT = found;
@@ -336,6 +336,30 @@
         btn.innerText = "ВЫ ЗАБРАЛИ!"; btn.classList.remove('win'); btn.disabled = true;
     }
 
+    // Админ-функции
+    function adminGiveBalance() {
+        const tId = document.getElementById('adm-target-id').value;
+        const amt = parseFloat(document.getElementById('adm-amount').value);
+        if(!tId || isNaN(amt)) return;
+        db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt);
+        tg.showAlert("Баланс пополнен!");
+    }
+
+    function adminResetAllData() {
+        if(confirm("ОПАСНО: Вы уверены, что хотите ОБНУЛИТЬ балансы и инвентари ВСЕХ игроков?")) {
+            db.ref('users').once('value', (snapshot) => {
+                const users = snapshot.val();
+                if(!users) return;
+                const updates = {};
+                Object.keys(users).forEach(uid => {
+                    updates[`users/${uid}/balance`] = 0.00;
+                    updates[`users/${uid}/inventory`] = null;
+                });
+                db.ref().update(updates).then(() => tg.showAlert("Данные всех игроков обнулены."));
+            });
+        }
+    }
+
     // История и Список ставок
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
@@ -364,14 +388,6 @@
         p += 20; document.getElementById('f-line').style.width = p + '%';
         if(p >= 100) { clearInterval(l); setTimeout(() => { document.getElementById('loader').style.display='none'; }, 400); }
     }, 100);
-
-    function adminGiveBalance() {
-        const tId = document.getElementById('adm-target-id').value;
-        const amt = parseFloat(document.getElementById('adm-amount').value);
-        if(!tId || isNaN(amt)) return;
-        db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt);
-        tg.showAlert("Баланс пополнен!");
-    }
 </script>
 </body>
 </html>
