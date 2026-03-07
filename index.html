@@ -182,57 +182,66 @@
     onlineRef.set(true); onlineRef.onDisconnect().remove();
     db.ref('presence').on('value', s => document.getElementById('online-val').innerText = s.numChildren() || 1);
 
-    // --- ЛОГИКА RTP (АДМИН-КОНТРОЛЛЕР) ---
+    // --- ЛОГИКА RTP (ОБНОВЛЕННАЯ) ---
     if (userId == ADMIN_ID) {
         document.getElementById('nav-admin-btn').style.display = 'flex';
 
         setInterval(async () => {
             const gSnap = await db.ref('game').once('value');
             const g = gSnap.val() || { status: "waiting", multiplier: 1, ts: Date.now() };
+            const betsSnap = await db.ref('bets').once('value');
+            const hasActiveBets = betsSnap.exists();
             const now = Date.now();
 
             if (g.status === "waiting" && (now - g.ts > 8000)) {
-                // ВЫЧИСЛЯЕМ ТОЧКУ КРАША СТРОГО ПО БАНКУ
                 let cp = 1.01;
 
-                if (bank <= 0) {
-                    cp = 1.01; // Банка нет — падает мгновенно
-                } else if (bank < 50) {
-                    cp = 1.10; // Маленький банк — фиксированный низкий стоп
-                } else if (bank >= 50 && bank < 500) {
-                    cp = 1.85; // Средний банк
+                if (!hasActiveBets) {
+                    // ЕСЛИ СТАВОК НЕТ: Ракета летает красиво (от 1.5 до 3.5)
+                    cp = parseFloat((Math.random() * (3.5 - 1.5) + 1.5).toFixed(2));
                 } else {
-                    cp = 2.75; // Крупный банк
+                    // ЕСЛИ СТАВКИ ЕСТЬ:
+                    if (bank <= 0) {
+                        // Банк пуст - бреем сразу (1.01 - 1.05)
+                        cp = parseFloat((Math.random() * (1.05 - 1.01) + 1.01).toFixed(2));
+                    } else if (bank < 100) {
+                        cp = 1.25; // Даем немного забрать
+                    } else {
+                        cp = 2.10; // Хороший полет
+                    }
                 }
 
-                // Записываем статус и жесткую точку остановки
                 db.ref('game').set({
                     status: "flying",
                     multiplier: 1.0,
                     crashPoint: cp,
                     ts: now
                 });
-                db.ref('bets').remove();
 
             } else if (g.status === "flying") {
                 let currentM = parseFloat(g.multiplier);
                 let targetCP = parseFloat(g.crashPoint || 1.1);
-                // Округляем до 2 знаков, чтобы не было 3.599999995
                 let nextM = parseFloat((currentM + 0.01).toFixed(2));
 
-                // Проверяем текущие выплаты в реальном времени
+                // Считаем общую выплату, если все сейчас выведут
                 let totalPayoutIfWin = 0;
-                const betsSnap = await db.ref('bets').once('value');
                 betsSnap.forEach(c => {
                     if(c.val().status === "playing") {
                         totalPayoutIfWin += (c.val().amount * nextM);
                     }
                 });
 
-                // УСЛОВИЕ КРАША (Никакого рандома):
-                // 1. Достигли лимита по банку (targetCP)
-                // 2. ИЛИ игроки прямо сейчас хотят забрать больше 80% всего банка
-                if (currentM >= targetCP || (totalPayoutIfWin > (bank * 0.8) && bank > 0)) {
+                // Проверка на краш
+                let shouldCrash = false;
+                if (currentM >= targetCP) shouldCrash = true;
+
+                // Если есть игроки и выплата > 80% банка - взрываем
+                if (hasActiveBets && bank > 0 && totalPayoutIfWin > (bank * 0.8)) shouldCrash = true;
+
+                // Если банк пуст, а ракета летит выше 1.05 при наличии ставок
+                if (hasActiveBets && bank <= 0 && currentM > 1.05) shouldCrash = true;
+
+                if (shouldCrash) {
                     db.ref('game').update({ status: "crash", multiplier: currentM, ts: now });
                     db.ref('history').push(currentM);
                 } else {
@@ -241,8 +250,9 @@
 
             } else if (g.status === "crash" && (now - g.ts > 4500)) {
                 db.ref('game').update({ status: "waiting", multiplier: 1.0, ts: now });
+                db.ref('bets').remove(); // Очистка только в конце цикла
             }
-        }, 130); // Оптимальный интервал для стабильной записи в Firebase
+        }, 130);
     }
 
     // --- КЛИЕНТСКИЙ ЦИКЛ (ВИЗУАЛ) ---
