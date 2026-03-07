@@ -58,17 +58,15 @@
         .p-trans { background: transparent; border: 1px solid var(--blue); color: white; }
         .inv-empty { background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 20px; padding: 40px; color: #444; font-size: 14px; }
 
-        /* НАВИГАЦИЯ */
-        .nav-bar { background: var(--card); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1c1c21; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #444; font-size: 11px; gap: 5px; cursor: pointer; }
-        .nav-item.active { color: var(--blue); }
-
+        /* МОДАЛКА СТАВКИ */
         #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; }
         #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s ease-out; padding: 25px 20px 40px; }
         #bet-modal.active { bottom: 0; }
 
-        /* АДМИН ПАНЕЛЬ */
-        #adm-input { width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 10px; box-sizing: border-box; }
+        /* НАВИГАЦИЯ */
+        .nav-bar { background: var(--card); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1c1c21; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #444; font-size: 11px; gap: 5px; cursor: pointer; }
+        .nav-item.active { color: var(--blue); }
     </style>
 </head>
 <body>
@@ -94,6 +92,27 @@
     </div>
     <div class="controls">
         <button id="bet-trigger" onclick="handleMainAction()">Сделать ставку</button>
+    </div>
+</div>
+
+<div id="scr-mines" class="screen">
+    <div class="profile-content">
+        <h2 style="color:var(--blue)">МИНИ-ИГРА "МИНЫ"</h2>
+        <div class="inv-empty">Скоро открытие...</div>
+    </div>
+</div>
+
+<div id="scr-admin" class="screen">
+    <div class="profile-content">
+        <h2 style="color:var(--blue)">АДМИН-ЦЕНТР</h2>
+        <div class="bal-card">
+            <p style="font-size:12px; color:#666;">ID ПОЛУЧАТЕЛЯ</p>
+            <input type="text" id="adm-target-id" placeholder="Напр: 582845..." style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
+            <p style="font-size:12px; color:#666;">СУММА (TON)</p>
+            <input type="number" id="adm-amount" placeholder="10.0" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center;">
+            <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900;">ВЫДАТЬ БАЛАНС</button>
+        </div>
+        <p style="font-size:11px; color:#444;">Доступ разрешен для ID: 1929021302</p>
     </div>
 </div>
 
@@ -123,20 +142,6 @@
     </div>
 </div>
 
-<div id="scr-admin" class="screen">
-    <div class="profile-content">
-        <h2 style="color:var(--blue)">АДМИН-ЦЕНТР</h2>
-        <div class="bal-card">
-            <p style="font-size:12px; color:#666;">ID ПОЛУЧАТЕЛЯ</p>
-            <input type="text" id="adm-target-id" placeholder="Напр: 582845..." style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
-            <p style="font-size:12px; color:#666;">СУММА (TON)</p>
-            <input type="number" id="adm-amount" placeholder="10.0" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center;">
-            <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900;">ВЫДАТЬ БАЛАНС</button>
-        </div>
-        <p style="font-size:11px; color:#444;">ID админа подтвержден</p>
-    </div>
-</div>
-
 <div id="bet-modal-overlay" onclick="closeBetMenu()"></div>
 <div id="bet-modal">
     <div style="display:flex; justify-content:space-between; margin-bottom:15px; color:#888;">
@@ -149,7 +154,7 @@
 
 <div class="nav-bar">
     <div class="nav-item active" onclick="switchScreen('crash', this)">🚀<span id="nav-crash">Краш</span></div>
-    <div class="nav-item">🎁<span id="nav-cases">Кейсы</span></div>
+    <div class="nav-item" onclick="switchScreen('mines', this)">💣<span id="nav-mines">Мины</span></div>
     <div class="nav-item" id="nav-admin-btn" style="display:none;" onclick="switchScreen('admin', this)">⚙️<span>Админ</span></div>
     <div class="nav-item" onclick="switchScreen('profile', this)">👤<span id="nav-profile">Профиль</span></div>
 </div>
@@ -162,7 +167,7 @@
     tg.expand();
 
     // --- НАСТРОЙКИ ---
-    const ADMIN_ID = 1929021302; // ЗАМЕНИ ЭТО НА СВОЙ ID ИЗ ПРОФИЛЯ!
+    const ADMIN_ID = 1929021302;
     // -----------------
 
     const userId = tg.initDataUnsafe.user?.id || "id_" + Math.random().toString(36).substr(2, 5);
@@ -170,7 +175,7 @@
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting", currentLang = 'ru';
     let betLock = false;
 
-    // Загрузка баланса из Firebase при старте
+    // Подписка на баланс в Firebase
     db.ref('users/' + userId + '/balance').on('value', snap => {
         if(snap.val() === null) {
             db.ref('users/' + userId).set({ balance: 10.00, name: userName });
@@ -202,17 +207,16 @@
     function switchScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('scr-' + id).classList.add('active');
+        const target = document.getElementById('scr-' + id);
+        if(target) target.classList.add('active');
         el.classList.add('active');
         if(id === 'profile') updateIDDisplay();
     }
 
-    // АДМИН-ФУНКЦИЯ
     function adminGiveBalance() {
         const tId = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
         if(!tId || isNaN(amt)) return tg.showAlert("Укажите ID и сумму!");
-
         db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt)
         .then(() => tg.showAlert(`Выдано ${amt} TON игроку ${tId}`))
         .catch(e => tg.showAlert("Ошибка: " + e.message));
@@ -223,14 +227,14 @@
         const btn = document.getElementById('lang-toggle');
         if(currentLang === 'en') {
             btn.innerText = '🇺🇸';
-            updateLangUI('PROFILE', 'ID: ', 'Your balance', 'Deposit', 'Withdraw', 'Inventory is empty', 'Crash', 'Cases', 'Mines', 'Profile');
+            updateLangUI('PROFILE', 'ID: ', 'Your balance', 'Deposit', 'Withdraw', 'Inventory is empty', 'Crash', 'Mines', 'Profile');
         } else {
             btn.innerText = '🇷🇺';
-            updateLangUI('ПРОФИЛЬ', 'ID: ', 'Ваш баланс', 'Пополнить', 'Вывести', 'Инвентарь пуст', 'Краш', 'Кейсы', 'Мины', 'Профиль');
+            updateLangUI('ПРОФИЛЬ', 'ID: ', 'Ваш баланс', 'Пополнить', 'Вывести', 'Инвентарь пуст', 'Краш', 'Мины', 'Профиль');
         }
     }
 
-    function updateLangUI(p, idLabel, b, d, w, i, n1, n2, n3, n4) {
+    function updateLangUI(p, idLabel, b, d, w, i, n1, n3, n4) {
         document.getElementById('txt-profile-title').innerText = p;
         document.getElementById('txt-id-label').innerText = idLabel;
         document.getElementById('txt-bal-label').innerText = b;
@@ -238,7 +242,6 @@
         document.getElementById('txt-withdraw').innerText = w;
         document.getElementById('txt-inv').innerText = i;
         document.getElementById('nav-crash').innerText = n1;
-        document.getElementById('nav-cases').innerText = n2;
         document.getElementById('nav-mines').innerText = n3;
         document.getElementById('nav-profile').innerText = n4;
     }
@@ -247,10 +250,10 @@
         document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2));
     }
 
+    // ИГРОВАЯ ЛОГИКА
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
-        list.innerHTML = "";
-        const data = snap.val(); if(!data) return;
+        list.innerHTML = ""; const data = snap.val(); if(!data) return;
         Object.values(data).reverse().forEach(v => {
             const i = document.createElement('div');
             i.className = 'history-item';
@@ -313,10 +316,7 @@
         if(isNaN(amt) || amt < 0.1) return tg.showAlert("Мин. ставка 0.1 TON");
         if(balance < amt) return tg.showAlert("Мало TON на балансе!");
         betLock = true; currentBet = amt;
-
-        // Списываем баланс в Firebase
         db.ref('users/' + userId + '/balance').set(balance - amt);
-
         db.ref('bets/' + userId).set({ name: userName, amount: amt, status: "playing", out: 0 });
         document.getElementById('bet-trigger').innerText = "СТАВКА ПРИНЯТА";
         document.getElementById('bet-trigger').disabled = true;
@@ -327,10 +327,7 @@
         if(hasCashedOut || gameStatus !== "flying" || currentBet === 0) return;
         hasCashedOut = true;
         let m = parseFloat(document.getElementById('mult').innerText);
-
-        // Начисляем выигрыш в Firebase
         db.ref('users/' + userId + '/balance').set(balance + (currentBet * m));
-
         db.ref('bets/' + userId).update({ status: "win", out: m });
         const btn = document.getElementById('bet-trigger');
         btn.innerText = "ВЫ ЗАБРАЛИ!"; btn.classList.remove('win'); btn.disabled = true;
