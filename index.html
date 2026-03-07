@@ -49,11 +49,66 @@
         #bet-trigger.win { background: var(--green); }
         #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
 
-        /* ИНВЕНТАРЬ */
-        #inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; margin-top: 15px; }
-        .inv-item { background: var(--card); border: 1px solid #1c1c21; border-radius: 15px; padding: 10px; text-align: center; }
-        .inv-item img { width: 50px; height: 50px; object-fit: contain; }
-        .inv-item span { display: block; font-size: 10px; color: #aaa; margin-top: 5px; white-space: nowrap; overflow: hidden; }
+        /* --- ОБНОВЛЕННЫЙ ИНВЕНТАРЬ --- */
+        #inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .inv-item {
+            background: linear-gradient(145deg, #1a1a20, #141419);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .inv-item:active { transform: scale(0.95); }
+
+        .inv-item img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(0,136,204,0.3));
+            margin-bottom: 10px;
+        }
+
+        .inv-item .item-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 8px;
+            background: var(--blue);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 5px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .inv-item span {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            color: #eee;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .inv-item .item-rarity {
+            font-size: 10px;
+            color: var(--blue);
+            margin-top: 4px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
 
         /* ПРОФИЛЬ */
         .profile-content { padding: 20px; text-align: center; flex-grow: 1; overflow-y: auto; }
@@ -69,7 +124,7 @@
         .p-btn { padding: 16px; border-radius: 18px; border: none; font-weight: 800; font-size: 14px; cursor: pointer; }
         .p-blue { background: var(--blue); color: white; }
         .p-trans { background: transparent; border: 1px solid var(--blue); color: white; }
-        .inv-empty { background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 20px; padding: 40px; color: #444; font-size: 14px; width: 100%; box-sizing: border-box; grid-column: span 3; }
+        .inv-empty { background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 20px; padding: 40px; color: #444; font-size: 14px; width: 100%; box-sizing: border-box; grid-column: span 2; }
 
         /* МОДАЛКА */
         #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; }
@@ -184,7 +239,6 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // --- БАЗА NFT (ПРИВЯЗКА К ИКСАМ) ---
     const NFT_DATABASE = [
         { name: "Vintage Cigar", targetX: 1.5, img: "https://i.ibb.co/v4m0Yv8/cigar.png" },
         { name: "Genie Lamp", targetX: 2.0, img: "https://i.ibb.co/mS7YFmG/genie.png" },
@@ -200,23 +254,29 @@
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting";
     let betLock = false, activeNFT = null;
 
-    // Подписка на баланс
     db.ref('users/' + userId + '/balance').on('value', snap => {
         if(snap.val() === null) db.ref('users/' + userId).set({ balance: 10.00, name: userName });
         else { balance = parseFloat(snap.val()); updateBalanceView(); }
     });
 
-    // Отрисовка инвентаря
+    // --- ОБНОВЛЕННАЯ ОТРИСОВКА ИНВЕНТАРЯ ---
     db.ref('users/' + userId + '/inventory').on('value', snap => {
         const grid = document.getElementById('inventory-grid');
         grid.innerHTML = "";
         const data = snap.val();
-        if(!data) grid.innerHTML = '<div class="inv-empty">Инвентарь пуст</div>';
-        else {
+
+        if(!data) {
+            grid.innerHTML = '<div class="inv-empty">Инвентарь пуст<br><span style="font-size:12px; opacity:0.5">Ловите NFT во время полета!</span></div>';
+        } else {
             Object.values(data).forEach(nft => {
                 const item = document.createElement('div');
                 item.className = 'inv-item';
-                item.innerHTML = `<img src="${nft.img}"><span>${nft.name}</span>`;
+                item.innerHTML = `
+                    <div class="item-status">NFT</div>
+                    <img src="${nft.img}">
+                    <span>${nft.name}</span>
+                    <div class="item-rarity">COLLECTIBLE</div>
+                `;
                 grid.appendChild(item);
             });
         }
@@ -238,7 +298,6 @@
         }
     }
 
-    // ИГРОВОЙ ЦИКЛ
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
@@ -336,7 +395,6 @@
         btn.innerText = "ВЫ ЗАБРАЛИ!"; btn.classList.remove('win'); btn.disabled = true;
     }
 
-    // Админ-функции
     function adminGiveBalance() {
         const tId = document.getElementById('adm-target-id').value;
         const amt = parseFloat(document.getElementById('adm-amount').value);
@@ -346,21 +404,19 @@
     }
 
     function adminResetAllData() {
-        if(confirm("ОПАСНО: Вы уверены, что хотите ОБНУЛИТЬ балансы и инвентари ВСЕХ игроков?")) {
-            db.ref('users').once('value', (snapshot) => {
-                const users = snapshot.val();
-                if(!users) return;
+        if(confirm("ОПАСНО: Вы уверены, что хотите ОБНУЛИТЬ всех?")) {
+            db.ref('users').once('value', snapshot => {
+                const users = snapshot.val(); if(!users) return;
                 const updates = {};
                 Object.keys(users).forEach(uid => {
                     updates[`users/${uid}/balance`] = 0.00;
                     updates[`users/${uid}/inventory`] = null;
                 });
-                db.ref().update(updates).then(() => tg.showAlert("Данные всех игроков обнулены."));
+                db.ref().update(updates).then(() => tg.showAlert("Обнулено."));
             });
         }
     }
 
-    // История и Список ставок
     db.ref('history').limitToLast(12).on('value', snap => {
         const list = document.getElementById('history-list');
         list.innerHTML = ""; const data = snap.val(); if(!data) return;
@@ -383,7 +439,6 @@
         });
     });
 
-    // Лоадер
     let p = 0; let l = setInterval(() => {
         p += 20; document.getElementById('f-line').style.width = p + '%';
         if(p >= 100) { clearInterval(l); setTimeout(() => { document.getElementById('loader').style.display='none'; }, 400); }
