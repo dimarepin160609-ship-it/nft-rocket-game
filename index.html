@@ -105,11 +105,13 @@
     <div class="profile-content">
         <h2 style="color:var(--blue)">АДМИН-ЦЕНТР</h2>
         <div class="bal-card">
-            <p style="font-size:12px; color:#666;">ID ПОЛУЧАТЕЛЯ</p>
+            <p style="font-size:12px; color:#666;">ID ЦЕЛИ</p>
             <input type="text" id="adm-target-id" placeholder="ID игрока" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
             <p style="font-size:12px; color:#666;">СУММА (TON)</p>
             <input type="number" id="adm-amount" placeholder="10.0" style="width: 100%; padding: 15px; background: #0b0b0e; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center;">
             <button onclick="adminGiveBalance()" style="width:100%; padding:18px; background:var(--green); border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 10px;">ВЫДАТЬ БАЛАНС</button>
+            <button onclick="adminResetTargetBalance()" style="width:100%; padding:18px; background:#f39c12; border:none; border-radius:15px; color:white; font-weight:900; margin-bottom: 25px;">ОБНУЛИТЬ ИГРОКА (ID)</button>
+            <div style="height: 1px; background: #333; margin-bottom: 20px;"></div>
             <button onclick="adminResetAllData()" style="width:100%; padding:18px; background:var(--red); border:none; border-radius:15px; color:white; font-weight:900;">ОБНУЛИТЬ ВСЕХ ИГРОКОВ</button>
         </div>
     </div>
@@ -350,8 +352,21 @@
         db.ref('users/' + tId + '/balance').transaction(curr => (curr || 0) + amt);
     }
 
+    function adminResetTargetBalance() {
+        const tId = document.getElementById('adm-target-id').value;
+        if (!tId) {
+            tg.showAlert("Введите ID игрока!");
+            return;
+        }
+        if (confirm("Обнулить баланс игрока " + tId + "?")) {
+            db.ref('users/' + tId + '/balance').set(0.00).then(() => {
+                tg.showAlert("Баланс игрока " + tId + " сброшен.");
+            });
+        }
+    }
+
     function adminResetAllData() {
-        if(confirm("RESET ALL?")) {
+        if(confirm("ОБНУЛИТЬ ВСЕХ?")) {
             db.ref('users').once('value', (s) => {
                 const updates = {};
                 Object.keys(s.val() || {}).forEach(uid => {
