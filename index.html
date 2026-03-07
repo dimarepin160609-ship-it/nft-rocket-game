@@ -182,7 +182,7 @@
     onlineRef.set(true); onlineRef.onDisconnect().remove();
     db.ref('presence').on('value', s => document.getElementById('online-val').innerText = s.numChildren() || 1);
 
-    // --- ЛОГИКА RTP (ОБНОВЛЕННАЯ) ---
+    // --- ЛОГИКА RTP (ФИНАЛЬНАЯ ВЕРСИЯ) ---
     if (userId == ADMIN_ID) {
         document.getElementById('nav-admin-btn').style.display = 'flex';
 
@@ -197,49 +197,58 @@
                 let cp = 1.01;
 
                 if (!hasActiveBets) {
-                    // ЕСЛИ СТАВОК НЕТ: Ракета летает красиво (от 1.5 до 3.5)
-                    cp = parseFloat((Math.random() * (3.5 - 1.5) + 1.5).toFixed(2));
+                    // 1. ЕСЛИ НЕТ ИГРОКОВ -> ЧИСТЫЙ РАНДОМ (банк не учитывается)
+                    let r = Math.random() * 100;
+                    if (r < 50) cp = (Math.random() * (2 - 1.1) + 1.1); // 50% до 2x
+                    else if (r < 85) cp = (Math.random() * (5 - 2) + 2); // 35% до 5x
+                    else cp = (Math.random() * (30 - 5) + 5); // 15% до 30x
                 } else {
-                    // ЕСЛИ СТАВКИ ЕСТЬ:
+                    // 2. ЕСЛИ ЕСТЬ ИГРОКИ
                     if (bank <= 0) {
-                        // Банк пуст - бреем сразу (1.01 - 1.05)
-                        cp = parseFloat((Math.random() * (1.05 - 1.01) + 1.01).toFixed(2));
-                    } else if (bank < 100) {
-                        cp = 1.25; // Даем немного забрать
+                        // БАНКА НЕТ -> СЛИВ НА 1.01
+                        cp = 1.01;
                     } else {
-                        cp = 2.10; // Хороший полет
+                        // БАНК ЕСТЬ -> ШАНСЫ ПО ТВОЕМУ ЗАПРОСУ
+                        let r = Math.random() * 100;
+                        if (r < 70) cp = (Math.random() * (1.5 - 1.1) + 1.1); // 70% шанс: 1.1 - 1.5x
+                        else if (r < 90) cp = (Math.random() * (2.0 - 1.5) + 1.5); // 20% шанс: 1.5 - 2.0x
+                        else cp = (Math.random() * (3.5 - 2.0) + 2.0); // 10% шанс: 2.0 - 3.5x+
                     }
                 }
 
                 db.ref('game').set({
                     status: "flying",
                     multiplier: 1.0,
-                    crashPoint: cp,
+                    crashPoint: parseFloat(cp.toFixed(2)),
                     ts: now
                 });
 
             } else if (g.status === "flying") {
                 let currentM = parseFloat(g.multiplier);
                 let targetCP = parseFloat(g.crashPoint || 1.1);
-                let nextM = parseFloat((currentM + 0.01).toFixed(2));
+                let nextM = parseFloat((currentM + (currentM < 2 ? 0.01 : 0.03)).toFixed(2));
 
-                // Считаем общую выплату, если все сейчас выведут
+                // Считаем потенциальную выплату ВСЕХ активных игроков на следующем шаге
                 let totalPayoutIfWin = 0;
-                betsSnap.forEach(c => {
-                    if(c.val().status === "playing") {
-                        totalPayoutIfWin += (c.val().amount * nextM);
-                    }
-                });
+                if (hasActiveBets) {
+                    betsSnap.forEach(c => {
+                        if(c.val().status === "playing") {
+                            totalPayoutIfWin += (c.val().amount * nextM);
+                        }
+                    });
+                }
 
-                // Проверка на краш
                 let shouldCrash = false;
+
+                // УСЛОВИЯ КРАША:
+                // 1. Достигли расчетной точки
                 if (currentM >= targetCP) shouldCrash = true;
 
-                // Если есть игроки и выплата > 80% банка - взрываем
+                // 2. ЕСЛИ ЕСТЬ ИГРОКИ И ПРЕВЫШЕНО 80% БАНКА
                 if (hasActiveBets && bank > 0 && totalPayoutIfWin > (bank * 0.8)) shouldCrash = true;
 
-                // Если банк пуст, а ракета летит выше 1.05 при наличии ставок
-                if (hasActiveBets && bank <= 0 && currentM > 1.05) shouldCrash = true;
+                // 3. ЕСЛИ ЕСТЬ ИГРОКИ И БАНК ПУСТ, А МНОЖИТЕЛЬ ВЫШЕ 1.01
+                if (hasActiveBets && bank <= 0 && currentM > 1.01) shouldCrash = true;
 
                 if (shouldCrash) {
                     db.ref('game').update({ status: "crash", multiplier: currentM, ts: now });
@@ -250,7 +259,7 @@
 
             } else if (g.status === "crash" && (now - g.ts > 4500)) {
                 db.ref('game').update({ status: "waiting", multiplier: 1.0, ts: now });
-                db.ref('bets').remove(); // Очистка только в конце цикла
+                db.ref('bets').remove();
             }
         }, 130);
     }
