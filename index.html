@@ -3,159 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFTROCKET ULTIMATE</title>
+    <title>NFTROCKET Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root {
-            --accent: #00a2ff;
-            --bg: #05070a;
-            --card: #0f121a;
-            --glass: rgba(255, 255, 255, 0.03);
-            --green: #00f2a9;
-            --red: #ff3b5c;
-            --text: #e2e8f0;
+            --blue: #0088cc;
+            --bg: #0b0b0e;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --card: #141419;
         }
 
-        body {
-            background: var(--bg); color: var(--text);
-            font-family: 'Inter', -apple-system, sans-serif;
-            margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
-        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* UI ЭЛЕМЕНТЫ */
-        .screen { display: none; flex-direction: column; height: 100%; flex-grow: 1; overflow-y: auto; padding-bottom: 80px; }
-        .screen.active { display: flex; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .screen { display: none; flex-direction: column; height: 100%; overflow: hidden; flex-grow: 1; }
+        .screen.active { display: flex; }
 
-        .header { display: flex; justify-content: space-between; padding: 15px; position: sticky; top: 0; z-index: 100; background: var(--bg); }
-        .badge {
-            background: var(--card); padding: 10px 14px; border-radius: 14px;
-            border: 1px solid var(--glass); font-size: 12px; font-weight: 800;
-            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        }
-        .dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; box-shadow: 0 0 10px var(--green); }
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; padding: 15px; align-items: center; }
+        .badge { background: #1c1c21; padding: 6px 14px; border-radius: 50px; font-size: 13px; font-weight: bold; border: 1px solid #333; display: flex; align-items: center; gap: 6px; }
 
-        /* ИГРОВОЕ ПОЛЕ */
-        #game-zone { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; min-height: 280px; }
-        #mult { font-size: 72px; font-weight: 900; z-index: 10; letter-spacing: -3px; text-shadow: 0 0 40px rgba(0,162,255,0.4); }
-        #rocket { width: 120px; position: absolute; filter: drop-shadow(0 0 20px var(--accent)); transition: transform 0.1s linear; }
+        /* GAME */
+        #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
+        #mult { font-size: 70px; font-weight: 900; z-index: 10; margin: 0; transition: color 0.3s; }
+        #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
 
-        /* ИСТОРИЯ */
-        .history-bar { display: flex; gap: 8px; padding: 0 15px 15px; overflow-x: auto; scrollbar-width: none; }
-        .h-chip {
-            padding: 5px 12px; border-radius: 10px; font-size: 11px; font-weight: 900;
-            background: var(--card); border: 1px solid var(--glass);
-        }
-        .h-low { color: var(--red); } .h-mid { color: var(--accent); } .h-high { color: var(--green); }
+        /* CONTROLS */
+        .controls { background: var(--card); padding: 15px 15px 25px; border-top: 1px solid #1c1c21; }
+        #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; }
+        #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
 
-        /* ПРОФИЛЬ И ЛЭНГВИДЖ */
-        .lang-toggle {
-            position: absolute; top: 15px; left: 15px; font-size: 22px;
-            background: var(--card); width: 45px; height: 45px; display: flex;
-            align-items: center; justify-content: center; border-radius: 15px; border: 1px solid var(--glass); z-index: 200;
-        }
-        .profile-hero {
-            background: linear-gradient(180deg, var(--card) 0%, transparent 100%);
-            padding: 60px 20px 30px; text-align: center;
-        }
-        .avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--accent); padding: 4px; box-shadow: 0 0 20px rgba(0,162,255,0.2); }
+        /* NAV */
+        .nav-bar { background: var(--card); display: flex; justify-content: space-around; padding: 15px 0 25px; border-top: 1px solid #1c1c21; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #444; font-size: 11px; gap: 5px; cursor: pointer; }
+        .nav-item.active { color: var(--blue); }
 
-        /* ИНВЕНТАРЬ */
-        #inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 15px; }
-        .nft-card {
-            background: linear-gradient(145deg, #0f121a, #05070a); border: 1px solid rgba(0,162,255,0.1);
-            border-radius: 20px; padding: 15px; text-align: center; box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-        }
-        .nft-card img { width: 70%; margin-bottom: 10px; filter: drop-shadow(0 0 10px var(--accent)); }
-
-        /* НАВИГАЦИЯ */
-        .nav {
-            background: rgba(15, 18, 26, 0.95); backdrop-filter: blur(10px);
-            display: flex; justify-content: space-around; padding: 12px 0 28px;
-            position: fixed; bottom: 0; width: 100%; border-top: 1px solid var(--glass);
-        }
-        .nav-btn { color: #4b5563; text-align: center; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-        .nav-btn.active { color: var(--accent); transform: translateY(-3px); }
-        .nav-btn i { font-size: 20px; display: block; margin-bottom: 4px; }
-
-        /* КНОПКИ */
-        .btn-action {
-            background: linear-gradient(135deg, #007cf0, #00dfd8); color: white; border: none;
-            padding: 20px; border-radius: 20px; font-weight: 900; font-size: 16px; width: 100%;
-            box-shadow: 0 10px 25px rgba(0, 124, 240, 0.3); transition: 0.2s;
-        }
-        .btn-action:active { transform: scale(0.96); }
-        .btn-wipe { background: var(--red); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: 800; margin-top: 20px; }
-
-        .inp-field { background: #161b22; border: 1px solid var(--glass); padding: 15px; border-radius: 15px; margin-bottom: 12px; }
-        .inp-field input { background: transparent; border: none; color: white; width: 100%; text-align: center; font-weight: 700; outline: none; }
+        /* MODAL */
+        #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; }
+        #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s; padding: 30px 20px; text-align: center; }
+        #bet-modal.active { bottom: 0; }
     </style>
 </head>
 <body>
 
 <div id="scr-crash" class="screen active">
     <div class="header">
-        <div class="badge"><div class="dot"></div> <span id="txt-online">Онлайн</span>: <span id="online-val">0</span></div>
-        <div class="badge" style="color:var(--accent)">💎 <span class="balance-view">0.00</span></div>
+        <div class="badge" style="color:var(--green)">👤 <span id="online-val">...</span></div>
+        <div class="badge">💎 <span class="balance-view">0.00</span></div>
     </div>
-    <div class="history-bar" id="hist-list"></div>
     <div id="game-zone">
         <h1 id="mult">1.00x</h1>
         <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
     </div>
-    <div style="padding: 20px; background: var(--card); border-radius: 30px 30px 0 0;">
-        <button class="btn-action" id="main-btn" onclick="handleAction()">СТАВКА</button>
+    <div class="controls">
+        <button id="bet-trigger" onclick="handleMainAction()">СТАВКА</button>
     </div>
 </div>
 
 <div id="scr-mines" class="screen">
-    <div style="flex-grow:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-        <div style="font-size: 60px; filter: drop-shadow(0 0 20px var(--red));">💣</div>
-        <h2 style="margin:15px 0 5px;" id="txt-mines-title">MINES</h2>
-        <p style="color:#4b5563; font-weight:700;" id="txt-dev">В РАЗРАБОТКЕ</p>
+    <div style="flex-grow:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <span style="font-size:60px;">💣</span>
+        <h2>MINES</h2>
+        <p style="color:#555;">В РАЗРАБОТКЕ</p>
     </div>
 </div>
 
 <div id="scr-profile" class="screen">
-    <div class="lang-toggle" onclick="toggleLang()" id="lang-icon">🇷🇺</div>
-    <div class="profile-hero">
-        <img id="u-photo" class="avatar" src="https://via.placeholder.com/100">
-        <h2 id="u-name" style="margin:10px 0 5px;">Player</h2>
-        <div style="font-size:32px; font-weight:900; color:var(--accent); margin-top:10px;">💎 <span class="balance-view">0.00</span></div>
-    </div>
-    <div style="padding:0 20px;"><span style="font-size:12px; color:#4b5563; font-weight:900; text-transform:uppercase;" id="txt-inv">Коллекция</span></div>
-    <div id="inv-grid"></div>
-</div>
-
-<div id="scr-admin" class="screen">
-    <div style="padding:20px;">
-        <div class="badge" style="width:100%; justify-content:center; margin-bottom:20px;">ADMIN PANEL</div>
-        <div class="inp-field"><input type="text" id="adm-uid" placeholder="User ID"></div>
-        <div class="inp-field"><input type="number" id="adm-val" placeholder="Amount (TON)"></div>
-        <button class="btn-action" style="background:var(--green); color:#000;" onclick="adminAdd()">ВЫДАТЬ</button>
-        <button class="btn-wipe" onclick="adminWipe()">ОБНУЛИТЬ ВСЕХ (WIPE)</button>
+    <div style="padding:40px 20px; text-align:center;">
+        <img id="u-avatar" style="width:100px; border-radius:50%; border:3px solid var(--blue);" src="https://via.placeholder.com/100">
+        <h2 id="display-name">Игрок</h2>
+        <div style="background:var(--card); padding:20px; border-radius:20px; margin-top:20px;">
+            <div style="color:#555; font-size:12px;">БАЛАНС</div>
+            <div style="font-size:30px; font-weight:900; color:var(--blue);">💎 <span class="balance-view">0.00</span></div>
+        </div>
+        <button onclick="adminWipe()" id="wipe-btn" style="display:none; margin-top:30px; color:var(--red); background:none; border:none;">[ WIPЕ DATABASE ]</button>
     </div>
 </div>
 
-<nav class="nav">
-    <div class="nav-btn active" onclick="nav('crash', this)">🚀<br><span id="nav-crash">Краш</span></div>
-    <div class="nav-btn" onclick="nav('mines', this)">💣<br><span id="nav-mines">Мины</span></div>
-    <div class="nav-btn" id="adm-nav" style="display:none;" onclick="nav('admin', this)">⚙️<br><span>Админ</span></div>
-    <div class="nav-btn" onclick="nav('profile', this)">👤<br><span id="nav-prof">Профиль</span></div>
-</nav>
+<div id="bet-modal-overlay" onclick="closeBetMenu()"></div>
+<div id="bet-modal">
+    <input type="number" id="bet-amount-input" value="0.1" step="0.1" style="width:100%; padding:15px; border-radius:15px; background:#0b0b0e; border:1px solid #333; color:white; font-size:20px; text-align:center;">
+    <button onclick="confirmBet()" style="width:100%; margin-top:15px; padding:20px; border-radius:20px; background:var(--blue); border:none; color:white; font-weight:900;">ПОДТВЕРДИТЬ</button>
+</div>
 
-<div id="m-bet" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:var(--card); padding:30px; border-radius:30px; width:100%; border:1px solid var(--accent);">
-        <h3 id="txt-bet-title">Сумма ставки</h3>
-        <div class="inp-field"><input type="number" id="bet-inp" value="0.1"></div>
-        <button class="btn-action" onclick="confirmBet()" id="txt-confirm">ПОДТВЕРДИТЬ</button>
-        <button onclick="closeModal()" style="background:none; border:none; color:#4b5563; width:100%; margin-top:15px; font-weight:700;" id="txt-cancel">Отмена</button>
-    </div>
+<div class="nav-bar">
+    <div class="nav-item active" onclick="switchScreen('crash', this)">🚀<span>Краш</span></div>
+    <div class="nav-item" onclick="switchScreen('mines', this)">💣<span>Мины</span></div>
+    <div class="nav-item" onclick="switchScreen('profile', this)">👤<span>Профиль</span></div>
 </div>
 
 <script>
+    // Инициализация данных
     const firebaseConfig = { databaseURL: "https://nftrocket-cb448-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -163,75 +103,51 @@
     tg.expand();
 
     const userId = tg.initDataUnsafe.user?.id || "582845661";
-    const userName = tg.initDataUnsafe.user?.first_name || 'Player';
+    const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
     const ADMIN_ID = 1929021302;
 
-    let balance = 0, currentBet = 0, hasCashed = false, gameStatus = "waiting", lang = 'RU';
+    let balance = 0, currentBet = 0, hasCashed = false, gameStatus = "waiting";
 
-    const strings = {
-        RU: { online: "Онлайн", crash: "Краш", mines: "Мины", prof: "Профиль", inv: "Коллекция", dev: "В РАЗРАБОТКЕ", bet: "СТАВКА", take: "ЗАБРАТЬ", confirm: "ПОДТВЕРДИТЬ", cancel: "Отмена", win: "ВЫИГРЫШ" },
-        EN: { online: "Online", crash: "Crash", mines: "Mines", prof: "Profile", inv: "Inventory", dev: "DEVELOPING", bet: "BET", take: "CASH OUT", confirm: "CONFIRM", cancel: "Cancel", win: "WIN" }
-    };
+    // Реальный онлайн (простой вариант)
+    db.ref('online/' + userId).set(true);
+    db.ref('online/' + userId).onDisconnect().remove();
+    db.ref('online').on('value', s => document.getElementById('online-val').innerText = s.numChildren());
 
-    // ОНЛАЙН СИСТЕМА
-    const onlineRef = db.ref('online_users/' + userId);
-    onlineRef.set(true); onlineRef.onDisconnect().remove();
-    db.ref('online_users').on('value', s => document.getElementById('online-val').innerText = s.numChildren());
-
-    // ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
+    // Баланс
     db.ref('users/' + userId + '/balance').on('value', s => {
         balance = parseFloat(s.val() || 0);
         document.querySelectorAll('.balance-view').forEach(v => v.innerText = balance.toFixed(2));
     });
 
-    function toggleLang() {
-        lang = (lang === 'RU') ? 'EN' : 'RU';
-        document.getElementById('lang-icon').innerText = (lang === 'RU') ? '🇷🇺' : '🇬🇧';
-        updateTexts();
-    }
-
-    function updateTexts() {
-        const s = strings[lang];
-        document.getElementById('txt-online').innerText = s.online;
-        document.getElementById('nav-crash').innerText = s.crash;
-        document.getElementById('nav-mines').innerText = s.mines;
-        document.getElementById('nav-prof').innerText = s.prof;
-        document.getElementById('txt-inv').innerText = s.inv;
-        document.getElementById('txt-dev').innerText = s.dev;
-        document.getElementById('txt-confirm').innerText = s.confirm;
-        document.getElementById('txt-cancel').innerText = s.cancel;
-        if(gameStatus === "waiting") document.getElementById('main-btn').innerText = s.bet;
-    }
-
-    function nav(id, el) {
+    // Переключение экранов
+    function switchScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('scr-' + id).classList.add('active');
         el.classList.add('active');
         if(id === 'profile') {
-            document.getElementById('u-name').innerText = userName;
-            if(userId == ADMIN_ID) document.getElementById('adm-nav').style.display = 'block';
+            document.getElementById('display-name').innerText = userName;
+            if(userId == ADMIN_ID) document.getElementById('wipe-btn').style.display = 'inline';
         }
     }
 
-    // ЛОГИКА ИГРЫ
+    // Игровой цикл
     db.ref('game').on('value', snap => {
         const data = snap.val(); if(!data) return;
         gameStatus = data.status;
         const m = data.multiplier;
         document.getElementById('mult').innerText = m.toFixed(2) + "x";
-        const btn = document.getElementById('main-btn');
+        const btn = document.getElementById('bet-trigger');
 
         if(gameStatus === "waiting") {
-            btn.disabled = false; btn.innerText = strings[lang].bet;
-            btn.style.filter = ""; hasCashed = false;
+            btn.disabled = false; btn.innerText = "СТАВКА";
+            hasCashed = false;
             document.getElementById('rocket').style.transform = "translate(0,0)";
         } else if(gameStatus === "flying") {
-            let pos = Math.min((m-1)*45, 260);
-            document.getElementById('rocket').style.transform = `translate(${pos}px, -${pos}px) rotate(-15deg)`;
+            let p = Math.min((m-1)*40, 250);
+            document.getElementById('rocket').style.transform = `translate(${p}px, -${p}px)`;
             if(currentBet > 0 && !hasCashed) {
-                btn.innerText = `${strings[lang].take} ${(currentBet * m).toFixed(2)}`;
-                btn.style.filter = "hue-rotate(90deg)";
+                btn.innerText = `ЗАБРАТЬ ${(currentBet * m).toFixed(2)}`;
             }
         } else {
             btn.disabled = true; btn.innerText = "CRASH!";
@@ -239,41 +155,40 @@
         }
     });
 
-    function handleAction() {
-        if(gameStatus === "waiting") document.getElementById('m-bet').style.display='flex';
-        else if(gameStatus === "flying" && currentBet > 0 && !hasCashed) {
+    function handleMainAction() {
+        if(gameStatus === "waiting") {
+            document.getElementById('bet-modal-overlay').style.display='block';
+            document.getElementById('bet-modal').classList.add('active');
+        } else if(gameStatus === "flying" && currentBet > 0 && !hasCashed) {
             hasCashed = true;
             let win = currentBet * parseFloat(document.getElementById('mult').innerText);
             db.ref('users/' + userId + '/balance').transaction(c => (c || 0) + win);
-            tg.showAlert(strings[lang].win + ": " + win.toFixed(2));
+            tg.showAlert("Выигрыш: " + win.toFixed(2));
         }
     }
 
     function confirmBet() {
-        let val = parseFloat(document.getElementById('bet-inp').value);
-        if(val > balance || val < 0.1) return;
-        currentBet = val;
-        db.ref('users/' + userId + '/balance').set(balance - val);
-        document.getElementById('m-bet').style.display='none';
+        let amt = parseFloat(document.getElementById('bet-amount-input').value);
+        if(amt > balance || amt < 0.1) return;
+        currentBet = amt;
+        db.ref('users/' + userId + '/balance').set(balance - amt);
+        closeBetMenu();
+    }
+
+    function closeBetMenu() {
+        document.getElementById('bet-modal').classList.remove('active');
+        document.getElementById('bet-modal-overlay').style.display='none';
     }
 
     function adminWipe() {
-        if(!confirm("УДАЛИТЬ ВСЕ ДАННЫЕ У ВСЕХ?")) return;
-        db.ref('users').once('value', s => {
-            const up = {};
-            s.forEach(u => { up[u.key + '/balance'] = 0; up[u.key + '/inventory'] = null; });
-            db.ref('users').update(up).then(() => tg.showAlert("DONE"));
-        });
+        if(confirm("ОБНУЛИТЬ ВСЕХ?")) {
+            db.ref('users').once('value', s => {
+                const up = {};
+                s.forEach(u => { up[u.key + '/balance'] = 0; });
+                db.ref('users').update(up);
+            });
+        }
     }
-
-    function adminAdd() {
-        const id = document.getElementById('adm-uid').value;
-        const v = parseFloat(document.getElementById('adm-val').value);
-        db.ref('users/' + id + '/balance').transaction(c => (c || 0) + v);
-    }
-
-    function closeModal() { document.getElementById('m-bet').style.display='none'; }
-    updateTexts();
 </script>
 </body>
 </html>
