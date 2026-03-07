@@ -93,7 +93,7 @@
 <div class="nav-bar">
     <div class="nav-item active">🚀<span>Краш</span></div>
     <div class="nav-item">🎁<span>Кейсы</span></div>
-    <div class="nav-item">🏆<span>Сезон</span></div>
+    <div class="nav-item">⛃<span>Мины</span></div>
     <div class="nav-item">👤<span>Профиль</span></div>
 </div>
 
@@ -130,7 +130,7 @@
         const data = snap.val(); if(!data) return;
         const oldStatus = gameStatus;
         gameStatus = data.status;
-        
+
         document.getElementById('mult').innerText = data.multiplier.toFixed(2) + "x";
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
@@ -140,24 +140,24 @@
                 // Сброс раунда
                 currentBet = 0;
                 hasCashedOut = false;
-                betLock = false; 
+                betLock = false;
                 btn.disabled = false;
                 btn.innerText = "Сделать ставку";
                 btn.classList.remove('win');
                 document.getElementById('mult').style.color = "white";
                 rocket.style.transform = "translate(0,0)";
             }
-        } 
+        }
         else if(gameStatus === "flying") {
             let off = Math.min((data.multiplier - 1) * 45, 280);
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
-            
+
             if(currentBet > 0 && !hasCashedOut) {
                 btn.innerText = `ЗАБРАТЬ ${(currentBet * data.multiplier).toFixed(2)}`;
                 btn.classList.add('win');
                 btn.disabled = false;
             }
-        } 
+        }
         else if(gameStatus === "crash") {
             document.getElementById('mult').style.color = "var(--red)";
             btn.disabled = true;
@@ -228,7 +228,7 @@
         document.getElementById('balance-val').innerText = balance.toFixed(2);
 
         db.ref('bets/' + userId).update({ status: "win", out: m });
-        
+
         const btn = document.getElementById('bet-trigger');
         btn.innerText = "ВЫ ЗАБРАЛИ!";
         btn.classList.remove('win');
@@ -240,11 +240,11 @@
         const list = document.getElementById('bets-list');
         list.innerHTML = "";
         const data = snap.val(); if(!data) return;
-        
+
         Object.values(data).forEach(b => {
             const card = document.createElement('div');
             card.className = 'bet-card';
-            
+
             let sTxt = "В игре", sClr = "var(--blue)", valTxt = `${b.amount} TON`;
 
             if(b.status === "win") {
@@ -280,4 +280,5 @@
 </script>
 </body>
 </html>
+
 
