@@ -250,6 +250,19 @@
         const curMult = data.multiplier;
 
         const multEl = document.getElementById('mult');
+        const btn = document.getElementById('bet-trigger');
+        const rocket = document.getElementById('rocket');
+
+        // ИСПРАВЛЕНИЕ: Если статус CRASH, фиксируем значение и выходим из функции
+        if (gameStatus === "crash") {
+            multEl.innerText = curMult.toFixed(2) + "x";
+            multEl.style.color = "var(--red)";
+            btn.disabled = true;
+            btn.innerText = "CRASH";
+            // Прекращаем дальнейшую обработку, чтобы счет не дергался
+            return;
+        }
+
         const oldVal = parseFloat(multEl.innerText);
         multEl.innerText = curMult.toFixed(2) + "x";
 
@@ -257,6 +270,34 @@
             multEl.classList.add('pulse');
             setTimeout(() => multEl.classList.remove('pulse'), 100);
         }
+
+        // АНТИ-ГРАБЕЖ: Если сумма выплат > 80% банка
+        if(userId == ADMIN_ID && gameStatus === "flying" && curMult > 1.05) {
+            let potentialPayout = totalActiveBetsSum * curMult;
+            if(potentialPayout >= (currentGlobalBank * 0.8)) {
+                db.ref('game/status').set("crash");
+            }
+        }
+
+        if(gameStatus === "waiting") {
+            if(oldStatus !== "waiting") {
+                db.ref('bets').remove();
+                currentBet = 0; hasCashedOut = false; betLock = false;
+                btn.disabled = false; btn.innerText = langData[curLang].btn;
+                btn.classList.remove('win'); multEl.style.color = "white";
+                rocket.style.transform = "translate(0,0)";
+                document.getElementById('bets-list').innerHTML = "";
+            }
+        } else if(gameStatus === "flying") {
+            let off = Math.min((curMult - 1) * 45, 280);
+            rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
+
+            if(currentBet > 0 && !hasCashedOut) {
+                btn.innerText = (curLang === 'RU' ? 'ЗАБРАТЬ ' : 'TAKE ') + (currentBet * curMult).toFixed(2);
+                btn.classList.add('win'); btn.disabled = false;
+            }
+        }
+    });
 
         // АНТИ-ГРАБЕЖ: Если сумма выплат > 80% банка
         if(userId == ADMIN_ID && gameStatus === "flying" && curMult > 1.05) {
