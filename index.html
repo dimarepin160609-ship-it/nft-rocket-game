@@ -109,7 +109,8 @@
         <h2 style="color:var(--blue); text-align:center; letter-spacing:2px;">MANAGEMENT</h2>
         <div class="bal-card" style="border-color: var(--gold);">
             <p style="font-size:12px; color:#888; margin-bottom:5px;">RTP BANK (80%)</p>
-            <div style="font-size:32px; font-weight:900; color:var(--gold);">💰 <span id="adm-bank-val">0.00</span></div>
+            <div style="font-size:32px; font-weight:900; color:var(--gold); margin-bottom: 10px;">💰 <span id="adm-bank-val">0.00</span></div>
+            <button onclick="adminResetBank()" style="background: rgba(231, 76, 60, 0.1); border: 1px solid var(--red); color: var(--red); padding: 6px 16px; border-radius: 12px; font-size: 11px; cursor: pointer; font-weight: bold; text-transform: uppercase;">Обнулить банк</button>
         </div>
         <input type="text" id="adm-target-id" class="adm-input" placeholder="User Telegram ID">
         <input type="number" id="adm-amount" class="adm-input" placeholder="Amount (TON)">
@@ -202,7 +203,6 @@
                     if(c.val().status === "playing") totalPayoutIfWin += c.val().amount * nextM;
                 });
 
-                // ЖЕСТКИЙ КРАШ: Пустой банк, лимит 80% или шанс 0.25%
                 if (totalPayoutIfWin > (bank * 0.8) || (bank <= 0 && nextM > 1.01) || Math.random() < 0.0025) {
                     db.ref('game').update({ status: "crash", multiplier: currentM, ts: now });
                     db.ref('history').push(currentM);
@@ -212,7 +212,7 @@
             } else if (g.status === "crash" && (now - g.ts > 4500)) {
                 db.ref('game').update({ status: "waiting", multiplier: 1.0, ts: now });
             }
-        }, 120); // Немного ускорили тик для плавности
+        }, 120);
     }
 
     // --- КЛИЕНТСКИЙ ЦИКЛ (ВИЗУАЛ) ---
@@ -227,8 +227,6 @@
             body.className = "is-crashed";
             mEl.innerText = mVal + "x"; mEl.style.color = "var(--red)";
             btn.disabled = true; btn.innerText = "CRASHED";
-
-            // Фиксация ракеты при краше
             let stopX = Math.min((mVal - 1) * 45, 280);
             rkt.style.transition = "none";
             rkt.style.transform = `translate(${stopX}px, -${stopX}px) rotate(-15deg) scale(0.8)`;
@@ -240,7 +238,6 @@
             rkt.style.transition = "transform 0.15s linear";
             let pos = Math.min((mVal - 1) * 45, 280);
             rkt.style.transform = `translate(${pos}px, -${pos}px) rotate(-15deg)`;
-
             if (currentBet > 0 && !hasCashedOut) {
                 btn.innerText = "ВЫВЕСТИ " + (currentBet * mVal).toFixed(2);
                 btn.classList.add('win'); btn.disabled = false;
@@ -323,6 +320,14 @@
                 const up = {}; Object.keys(s.val() || {}).forEach(k => up[`users/${k}/balance`] = 0);
                 db.ref().update(up);
             });
+        }
+    }
+
+    // НОВАЯ ФУНКЦИЯ ДЛЯ ОБНУЛЕНИЯ БАНКА
+    function adminResetBank() {
+        if(confirm("ВЫ УВЕРЕНЫ, ЧТО ХОТИТЕ ОБНУЛИТЬ БАНК RTP?")) {
+            db.ref('game_stats/bank').set(0);
+            tg.showAlert("Банк обнулен!");
         }
     }
 
