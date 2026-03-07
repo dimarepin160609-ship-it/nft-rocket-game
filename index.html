@@ -49,7 +49,7 @@
         .avatar-circle { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--blue); margin: 0 auto 15px; overflow: hidden; background: #1c1c21; }
         .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
         .user-title { font-size: 24px; font-weight: bold; margin: 5px 0; }
-        .lvl-info { color: #666; font-size: 14px; margin-bottom: 25px; display: block; }
+        .id-badge { display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 25px; cursor: pointer; }
         .bal-card { background: var(--card); border-radius: 24px; padding: 20px; border: 1px solid #1c1c21; margin-bottom: 15px; }
         .bal-val { font-size: 32px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 5px; }
         .prof-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
@@ -107,7 +107,12 @@
         </div>
 
         <h2 class="user-title" id="display-name">Игрок</h2>
-        <span class="lvl-info" id="txt-lvl">1 уровень • 0 / 10 TON</span>
+
+        <div class="id-badge" onclick="copyId()">
+            <span style="color: #666; font-size: 14px;" id="txt-id-label">ID: </span>
+            <span style="color: var(--blue); font-size: 14px; font-weight: bold;" id="user-id-val">00000000</span>
+            <span style="font-size: 10px;">📋</span>
+        </div>
 
         <div class="bal-card">
             <div style="color:#555; font-size:12px; font-weight:bold; text-transform:uppercase;" id="txt-bal-label">Ваш баланс</div>
@@ -155,10 +160,26 @@
     const userId = tg.initDataUnsafe.user?.id || "id_" + Math.random().toString(36).substr(2, 5);
     const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
     document.getElementById('display-name').innerText = userName;
+
+    // УСТАНОВКА ID В ПРОФИЛЕ
+    document.getElementById('user-id-val').innerText = userId;
+
     if(tg.initDataUnsafe.user?.photo_url) document.getElementById('user-avatar').src = tg.initDataUnsafe.user.photo_url;
 
     let balance = 10.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting", currentLang = 'ru';
     let betLock = false;
+
+    // ФУНКЦИЯ КОПИРОВАНИЯ
+    function copyId() {
+        const idText = document.getElementById('user-id-val').innerText;
+        const tempInput = document.createElement("input");
+        tempInput.value = idText;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        tg.showAlert("ID скопирован: " + idText);
+    }
 
     function switchScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -172,16 +193,16 @@
         const btn = document.getElementById('lang-toggle');
         if(currentLang === 'en') {
             btn.innerText = '🇺🇸';
-            updateLangUI('PROFILE', 'Level 1', 'Your balance', 'Deposit', 'Withdraw', 'Inventory is empty', 'Crash', 'Cases', 'Mines', 'Profile');
+            updateLangUI('PROFILE', 'ID: ', 'Your balance', 'Deposit', 'Withdraw', 'Inventory is empty', 'Crash', 'Cases', 'Mines', 'Profile');
         } else {
             btn.innerText = '🇷🇺';
-            updateLangUI('ПРОФИЛЬ', '1 уровень', 'Ваш баланс', 'Пополнить', 'Вывести', 'Инвентарь пуст', 'Краш', 'Кейсы', 'Мины', 'Профиль');
+            updateLangUI('ПРОФИЛЬ', 'ID: ', 'Ваш баланс', 'Пополнить', 'Вывести', 'Инвентарь пуст', 'Краш', 'Кейсы', 'Мины', 'Профиль');
         }
     }
 
-    function updateLangUI(p, l, b, d, w, i, n1, n2, n3, n4) {
+    function updateLangUI(p, idLabel, b, d, w, i, n1, n2, n3, n4) {
         document.getElementById('txt-profile-title').innerText = p;
-        document.getElementById('txt-lvl').innerText = l + ' • 0 / 10 TON';
+        document.getElementById('txt-id-label').innerText = idLabel;
         document.getElementById('txt-bal-label').innerText = b;
         document.getElementById('txt-deposit').innerText = d;
         document.getElementById('txt-withdraw').innerText = w;
