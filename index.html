@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFTROCKET Pro</title>
+    <title>TonRocket Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -31,16 +31,9 @@
         .h-high { color: #f1c40f; border-color: rgba(241,196,15,0.4); text-shadow: 0 0 5px rgba(241,196,15,0.5); }
 
         #game-zone { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200px; }
-
         #mult { font-size: 75px; font-weight: 900; z-index: 10; margin: 0; position: relative; bottom: 20px; text-shadow: 0 0 20px rgba(0,136,204,0.3); transition: transform 0.1s ease-out; }
         .pulse { transform: scale(1.05); }
-
         #rocket { width: 130px; position: absolute; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px rgba(0,162,255,0.4)); }
-
-        #nft-stage { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); opacity: 0; transition: 0.5s ease; text-align: center; z-index: 1; pointer-events: none; }
-        #nft-stage.visible { opacity: 0.7; transform: translate(-50%, -55%) scale(1.1); }
-        #nft-stage img { width: 100px; filter: drop-shadow(0 0 10px rgba(0,136,204,0.5)); }
-        #nft-stage div { font-size: 12px; font-weight: 900; color: var(--blue); margin-top: 5px; text-transform: uppercase; text-shadow: 0 0 5px black; }
 
         #bets-container { background: var(--card); border-radius: 24px 24px 0 0; margin: 0 10px; flex-shrink: 0; height: 260px; display: flex; flex-direction: column; border: 1px solid #1c1c21; }
         .bets-header { padding: 12px; text-align: center; color: #555; font-size: 13px; border-bottom: 1px solid #1c1c21; }
@@ -51,11 +44,6 @@
         #bet-trigger { background: linear-gradient(180deg, #00a2ff 0%, #0066ff 100%); color: white; border: none; padding: 20px; border-radius: 20px; font-size: 18px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; }
         #bet-trigger.win { background: var(--green); }
         #bet-trigger:disabled { background: #222 !important; opacity: 0.8; }
-
-        #inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; margin-top: 15px; }
-        .inv-item { background: var(--card); border: 1px solid #1c1c21; border-radius: 15px; padding: 10px; text-align: center; }
-        .inv-item img { width: 50px; height: 50px; object-fit: contain; }
-        .inv-item span { display: block; font-size: 10px; color: #aaa; margin-top: 5px; white-space: nowrap; overflow: hidden; }
 
         .profile-content { padding: 20px; text-align: center; flex-grow: 1; overflow-y: auto; }
         .profile-top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
@@ -70,7 +58,6 @@
         .p-btn { padding: 16px; border-radius: 18px; border: none; font-weight: 800; font-size: 14px; cursor: pointer; }
         .p-blue { background: var(--blue); color: white; }
         .p-trans { background: transparent; border: 1px solid var(--blue); color: white; }
-        .inv-empty { background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 20px; padding: 40px; color: #444; font-size: 14px; width: 100%; box-sizing: border-box; grid-column: span 3; }
 
         #bet-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; }
         #bet-modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #1c1c21; border-radius: 30px 30px 0 0; z-index: 1001; transition: 0.3s ease-out; padding: 25px 20px 40px; }
@@ -84,7 +71,7 @@
 <body>
 
 <div id="loader">
-    <h2>TonRocket
+    <h2>TONROCKET</h2>
     <div class="progress-bar"><div id="f-line"></div></div>
 </div>
 
@@ -95,10 +82,6 @@
     </div>
     <div class="history-row" id="history-list"></div>
     <div id="game-zone">
-        <div id="nft-stage">
-            <img id="nft-preview-img" src="">
-            <div id="nft-preview-name">NFT NAME</div>
-        </div>
         <h1 id="mult">1.00x</h1>
         <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
     </div>
@@ -114,7 +97,7 @@
 <div id="scr-mines" class="screen">
     <div class="profile-content">
         <h2 style="color:var(--blue)" id="mines-title">МИНИ-ИГРА "МИНЫ"</h2>
-        <div class="inv-empty" id="mines-soon">Скоро открытие...</div>
+        <div style="background: rgba(255,255,255,0.02); border: 1px dashed #333; border-radius: 20px; padding: 40px; color: #444; font-size: 14px;" id="mines-soon">Скоро открытие...</div>
     </div>
 </div>
 
@@ -141,7 +124,7 @@
         </div>
         <div class="avatar-circle"><img id="user-avatar" src="https://via.placeholder.com/110"></div>
         <h2 class="user-title" id="display-name">Игрок</h2>
-        <div class="id-badge" onclick="copyId()">
+        <div class="id-badge">
             <span style="color: #666; font-size: 14px;">ID: </span>
             <span style="color: var(--blue); font-size: 14px; font-weight: bold;" id="user-id-val">...</span>
         </div>
@@ -153,9 +136,6 @@
             <button class="p-btn p-blue" id="btn-dep">Пополнить</button>
             <button class="p-btn p-trans" id="btn-out">Вывести</button>
         </div>
-
-        <h3 style="text-align:left; font-size:14px; color:#555; margin-left:10px;" id="inv-label">ИНВЕНТАРЬ NFT</h3>
-        <div id="inventory-grid"></div>
     </div>
 </div>
 
@@ -183,20 +163,11 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    const NFT_DATABASE = [
-        { name: "Vintage Cigar", targetX: 1.5, img: "https://i.ibb.co/v4m0Yv8/cigar.png" },
-        { name: "Genie Lamp", targetX: 2.0, img: "https://i.ibb.co/mS7YFmG/genie.png" },
-        { name: "Perfume Bottle", targetX: 5.0, img: "https://i.ibb.co/kBQzS8C/perfume.png" },
-        { name: "Cherry", targetX: 10.0, img: "https://i.ibb.co/S7qM1zF/cherry.png" },
-        { name: "Lollipop", targetX: 25.0, img: "https://i.ibb.co/Vv9rZzN/lolli.png" },
-        { name: "Plush Pepe", targetX: 50.0, img: "https://i.ibb.co/p0X4Z0P/pepe.png" }
-    ];
-
     const ADMIN_ID = 1929021302;
     const userId = tg.initDataUnsafe.user?.id || "582845661";
     const userName = tg.initDataUnsafe.user?.first_name || 'Игрок';
     let balance = 0.00, currentBet = 0, hasCashedOut = false, gameStatus = "waiting", curLang = 'RU';
-    let betLock = false, activeNFT = null;
+    let betLock = false;
 
     const onlineRef = db.ref('presence/' + userId);
     onlineRef.set(true);
@@ -206,8 +177,8 @@
     });
 
     const langData = {
-        RU: { crash: "Краш", mines: "Мины", prof: "Профиль", inv: "ИНВЕНТАРЬ NFT", bal: "Ваш баланс", dep: "Пополнить", out: "Вывести", sum: "Сумма (TON)", all: "Все ставки", btn: "Сделать ставку", soon: "Скоро открытие...", confirm: "ПОДТВЕРДИТЬ" },
-        EN: { crash: "Crash", mines: "Mines", prof: "Profile", inv: "NFT INVENTORY", bal: "Your Balance", dep: "Deposit", out: "Withdraw", sum: "Amount (TON)", all: "All Bets", btn: "Place Bet", soon: "Coming soon...", confirm: "CONFIRM" }
+        RU: { crash: "Краш", mines: "Мины", prof: "Профиль", bal: "Ваш баланс", dep: "Пополнить", out: "Вывести", sum: "Сумма (TON)", all: "Все ставки", btn: "Сделать ставку", soon: "Скоро открытие...", confirm: "ПОДТВЕРДИТЬ" },
+        EN: { crash: "Crash", mines: "Mines", prof: "Profile", bal: "Your Balance", dep: "Deposit", out: "Withdraw", sum: "Amount (TON)", all: "All Bets", btn: "Place Bet", soon: "Coming soon...", confirm: "CONFIRM" }
     };
 
     function switchLang() {
@@ -218,7 +189,6 @@
         document.getElementById('nav-m').innerText = d.mines;
         document.getElementById('nav-p').innerText = d.prof;
         document.getElementById('profile-header-title').innerText = d.prof;
-        document.getElementById('inv-label').innerText = d.inv;
         document.getElementById('bal-label').innerText = d.bal;
         document.getElementById('btn-dep').innerText = d.dep;
         document.getElementById('btn-out').innerText = d.out;
@@ -233,20 +203,6 @@
     db.ref('users/' + userId + '/balance').on('value', snap => {
         if(snap.val() === null) db.ref('users/' + userId).set({ balance: 10.00, name: userName });
         else { balance = parseFloat(snap.val()); updateBalanceView(); }
-    });
-
-    db.ref('users/' + userId + '/inventory').on('value', snap => {
-        const grid = document.getElementById('inventory-grid');
-        grid.innerHTML = ""; const data = snap.val();
-        if(!data) grid.innerHTML = `<div class="inv-empty">${langData[curLang].inv} пуст</div>`;
-        else {
-            Object.values(data).forEach(nft => {
-                const item = document.createElement('div');
-                item.className = 'inv-item';
-                item.innerHTML = `<img src="${nft.img}"><span>${nft.name}</span>`;
-                grid.appendChild(item);
-            });
-        }
     });
 
     function updateBalanceView() {
@@ -282,33 +238,19 @@
 
         const btn = document.getElementById('bet-trigger');
         const rocket = document.getElementById('rocket');
-        const nftStage = document.getElementById('nft-stage');
 
         if(gameStatus === "waiting") {
             if(oldStatus !== "waiting") {
-                // ПРАВКА 1: Очистка ставок при новом раунде
                 db.ref('bets').remove();
-
-                currentBet = 0; hasCashedOut = false; betLock = false; activeNFT = null;
+                currentBet = 0; hasCashedOut = false; betLock = false;
                 btn.disabled = false; btn.innerText = langData[curLang].btn;
                 btn.classList.remove('win'); multEl.style.color = "white";
                 rocket.style.transform = "translate(0,0)";
-                nftStage.classList.remove('visible');
                 document.getElementById('bets-list').innerHTML = "";
             }
         } else if(gameStatus === "flying") {
             let off = Math.min((curMult - 1) * 45, 280);
             rocket.style.transform = `translate(${off}px, -${off}px) rotate(-15deg)`;
-
-            let passedNFTs = NFT_DATABASE.filter(n => curMult >= n.targetX);
-            let found = passedNFTs[passedNFTs.length - 1];
-
-            if(found && currentBet > 0 && !hasCashedOut) {
-                activeNFT = found;
-                document.getElementById('nft-preview-img').src = found.img;
-                document.getElementById('nft-preview-name').innerText = found.name;
-                nftStage.classList.add('visible');
-            }
 
             if(currentBet > 0 && !hasCashedOut) {
                 btn.innerText = (curLang === 'RU' ? 'ЗАБРАТЬ ' : 'TAKE ') + (currentBet * curMult).toFixed(2);
@@ -317,7 +259,6 @@
         } else if(gameStatus === "crash") {
             multEl.style.color = "var(--red)";
             btn.disabled = true; btn.innerText = "CRASH";
-            nftStage.classList.remove('visible');
         }
     });
 
@@ -346,7 +287,6 @@
         const confirmBtn = document.getElementById('confirm-bet-btn');
         confirmBtn.disabled = true;
 
-        // ПРАВКА 2: Защита от двойной ставки с двух устройств
         db.ref('bets/' + userId).once('value').then(snap => {
             if (snap.exists() && snap.val().status === "playing") {
                 tg.showAlert("Ставка уже сделана!");
@@ -372,7 +312,6 @@
         let m = parseFloat(document.getElementById('mult').innerText);
         let win = currentBet * m;
         db.ref('users/' + userId + '/balance').transaction(curr => (curr || 0) + win);
-        if(activeNFT) db.ref('users/' + userId + '/inventory').push(activeNFT);
         db.ref('bets/' + userId).update({ status: "win", out: m });
         document.getElementById('bet-trigger').innerText = "OK";
         document.getElementById('bet-trigger').classList.remove('win');
@@ -417,7 +356,6 @@
                 const updates = {};
                 Object.keys(s.val() || {}).forEach(uid => {
                     updates[`users/${uid}/balance`] = 0.00;
-                    updates[`users/${uid}/inventory`] = null;
                 });
                 db.ref().update(updates);
             });
