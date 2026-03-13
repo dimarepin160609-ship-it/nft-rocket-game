@@ -3,102 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TonRocket Elite</title>
+    <title>TonRocket Ultimate</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --blue: #0088ff; --bg: #050507; --card: #111116; --green: #00ff88; --red: #ff3355; --glass: rgba(255,255,255,0.03); }
-        body { background: var(--bg); color: white; font-family: 'Inter', system-ui, sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        :root { --blue: #0088ff; --bg: #0b0b0e; --card: #141419; --green: #00ff88; --red: #ff3355; --glass: rgba(255,255,255,0.05); }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-        /* Loader */
-        #loader { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: 0.5s; }
-        .spinner { width: 40px; height: 40px; border: 3px solid var(--glass); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .screen { display: none; flex-direction: column; height: 100%; flex-grow: 1; padding-bottom: 80px; box-sizing: border-box; }
+        #loader { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .screen { display: none; flex-direction: column; height: 100%; flex-grow: 1; padding-bottom: 80px; box-sizing: border-box; overflow-y: auto; }
         .screen.active { display: flex; }
 
         /* Header */
-        .header { display: flex; justify-content: space-between; padding: 15px 20px; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); }
-        .bal-box { background: var(--card); padding: 6px 14px; border-radius: 12px; border: 1px solid var(--glass); display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .header { display: flex; justify-content: space-between; padding: 10px 15px; align-items: center; }
+        .history-bar { display: flex; gap: 8px; padding: 5px 15px; overflow-x: auto; scrollbar-width: none; min-height: 30px; }
+        .h-item { padding: 3px 10px; background: var(--card); border-radius: 50px; font-size: 11px; font-weight: bold; border: 1px solid var(--glass); }
 
-        /* Game Zone */
-        #game-area { flex-grow: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #mult { font-size: 80px; font-weight: 900; letter-spacing: -2px; z-index: 10; transition: 0.1s; text-shadow: 0 0 40px rgba(0,136,255,0.3); }
-        #rocket { width: 140px; position: absolute; filter: drop-shadow(0 0 20px var(--blue)); transition: transform 0.2s linear; }
+        /* Game Area */
+        #game-area { height: 260px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        #mult { font-size: 65px; font-weight: 900; z-index: 10; text-shadow: 0 0 30px rgba(0,136,255,0.4); }
+        #rocket { width: 110px; position: absolute; transition: transform 0.2s linear; filter: drop-shadow(0 0 15px var(--blue)); }
 
-        /* Action UI */
-        .action-container { padding: 0 20px 20px; }
-        #main-btn { width: 100%; padding: 20px; border-radius: 18px; border: none; background: var(--blue); color: white; font-size: 18px; font-weight: 800; transition: 0.2s; box-shadow: 0 10px 25px rgba(0,136,255,0.2); }
-        #main-btn:active { transform: scale(0.97); }
-        #main-btn.cashout { background: var(--green); color: #000; box-shadow: 0 10px 25px rgba(0,255,136,0.2); }
-        #main-btn:disabled { background: #1a1a20; color: #444; box-shadow: none; }
+        /* Action */
+        .action-box { padding: 15px; }
+        #main-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: var(--blue); color: white; font-size: 16px; font-weight: 800; box-shadow: 0 5px 15px rgba(0,136,255,0.3); }
+        #main-btn.cashout { background: var(--green); color: #000; }
 
         /* Live Bets */
-        .live-bets { flex-grow: 0.5; background: var(--card); border-radius: 24px 24px 0 0; border-top: 1px solid var(--glass); padding: 20px; overflow-y: auto; }
-        .bet-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass); font-size: 13px; color: #aaa; }
-        .bet-row.win { color: var(--green); font-weight: bold; }
+        .bets-list { flex-grow: 1; padding: 10px 15px; }
+        .bet-row { display: flex; justify-content: space-between; background: var(--card); padding: 8px 12px; border-radius: 10px; margin-bottom: 5px; font-size: 12px; border: 1px solid var(--glass); }
+        .bet-row.win { border-color: var(--green); background: rgba(0,255,136,0.05); }
+
+        /* Profile */
+        .prof-card { text-align: center; padding: 20px; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--blue); margin-bottom: 10px; }
+        .p-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .p-btn { padding: 12px; border-radius: 12px; border: 1px solid var(--glass); background: var(--card); color: white; font-weight: bold; }
 
         /* Nav */
-        .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: rgba(17,17,22,0.8); backdrop-filter: blur(15px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--glass); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: #111116; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--glass); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #444; font-size: 10px; font-weight: bold; }
         .nav-item.active { color: var(--blue); }
 
-        /* Modal */
-        .modal { position: fixed; bottom: -100%; left: 0; right: 0; background: #111116; border-radius: 30px 30px 0 0; padding: 30px 20px; transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 1000; border-top: 1px solid var(--glass); }
+        .modal { position: fixed; bottom: -100%; width: 100%; background: #18181f; border-radius: 25px 25px 0 0; padding: 25px; transition: 0.3s; z-index: 1000; box-sizing: border-box; }
         .modal.active { bottom: 0; }
-        .inp { width: 100%; background: #000; border: 1px solid #222; padding: 16px; border-radius: 14px; color: white; font-size: 18px; text-align: center; margin-bottom: 15px; box-sizing: border-box; }
+        .inp { width: 100%; background: #000; border: 1px solid #333; padding: 14px; border-radius: 12px; color: white; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-<div id="loader"><div class="spinner"></div></div>
+<div id="loader"><h2>TONROCKET</h2></div>
 
 <div class="header">
-    <div style="font-size:12px; color:var(--green); font-weight:800;">● <span id="onl">1</span> ONLINE</div>
-    <div class="bal-box">💎 <span id="u-bal">0.00</span></div>
+    <div style="font-size:11px; color:var(--green);">● ONLINE: <span id="onl">1</span></div>
+    <div style="background:var(--card); padding:5px 12px; border-radius:50px; font-weight:900;">💎 <span id="u-bal">0.00</span></div>
 </div>
+
+<div class="history-bar" id="history"></div>
 
 <div id="scr-crash" class="screen active">
     <div id="game-area">
         <h1 id="mult">1.00x</h1>
         <img id="rocket" src="https://cdn-icons-png.flaticon.com/512/1356/1356479.png">
     </div>
-
-    <div class="action-container">
-        <button id="main-btn" onclick="handleAction()">ПОСТАВИТЬ</button>
+    <div class="action-box">
+        <button id="main-btn" onclick="handleBtn()">СТАВКА</button>
     </div>
+    <div class="bets-list" id="bet-list"></div>
+</div>
 
-    <div class="live-bets">
-        <div style="font-size:11px; color:#555; margin-bottom:10px; font-weight:800; letter-spacing:1px;">LIVE BETS</div>
-        <div id="bet-list"></div>
+<div id="scr-profile" class="screen">
+    <div class="prof-card">
+        <button onclick="toggleLang()" style="float:left; background:none; border:1px solid #333; color:#555; padding:4px 8px; border-radius:5px;">RU/EN</button>
+        <div style="clear:both;"></div>
+        <img id="u-img" class="avatar" src="https://via.placeholder.com/80">
+        <h3 id="u-name" style="margin:5px 0;">Player</h3>
+        <p style="color:#444; font-size:11px;">ID: <span id="u-id">0</span></p>
+        <div class="p-btns">
+            <button class="p-btn" style="background:var(--blue); border:none;" onclick="tg.showAlert('Deposit Offline')">DEPOSIT</button>
+            <button class="p-btn" onclick="tg.showAlert('Min: 5 TON')">WITHDRAW</button>
+        </div>
     </div>
 </div>
 
-<div id="scr-admin" class="screen" style="padding:25px;">
-    <h2 style="margin-top:0;">ADMIN</h2>
-    <div style="background:var(--card); padding:20px; border-radius:18px; border:1px solid #222;">
-        <div style="font-size:12px; color:#666;">GAME BANK (80%)</div>
-        <div id="adm-bank" style="font-size:24px; font-weight:900; color:var(--blue); margin-top:5px;">0.00 TON</div>
+<div id="scr-admin" class="screen" style="padding:20px;">
+    <h3>ADMIN PANEL</h3>
+    <div style="background:var(--card); padding:15px; border-radius:15px; border-left:4px solid var(--blue);">
+        <p style="margin:0; font-size:11px; color:#555;">BANK RTP (80%)</p>
+        <h2 id="adm-bank" style="margin:5px 0;">0.00 TON</h2>
     </div>
     <br>
-    <input type="text" id="adm-id" class="inp" style="font-size:14px;" placeholder="Player ID">
-    <input type="number" id="adm-sum" class="inp" style="font-size:14px;" placeholder="Amount +/-">
-    <button class="inp" style="background:var(--blue); border:none; font-weight:800;" onclick="admOp()">ОБНОВИТЬ БАЛАНС</button>
-    <button class="inp" style="background:var(--red); border:none; margin-top:10px; font-size:12px;" onclick="db.ref('game_stats/bank').set(0)">СБРОСИТЬ БАНК В 0</button>
+    <input type="text" id="adm-id" class="inp" placeholder="User ID">
+    <input type="number" id="adm-sum" class="inp" placeholder="TON Sum">
+    <button class="inp" style="background:var(--blue); border:none; font-weight:bold;" onclick="admOp()">ОБНОВИТЬ</button>
 </div>
 
 <div class="nav">
-    <div class="nav-item active" onclick="showScr('crash', this)">🚀<span>CRASH</span></div>
-    <div class="nav-item" id="adm-nav" style="display:none;" onclick="showScr('admin', this)">⚙️<span>ADMIN</span></div>
-    <div class="nav-item" onclick="tg.showAlert('Coming Soon')">👤<span>PROFILE</span></div>
+    <div class="nav-item active" onclick="showScr('crash', this)">🚀<span>КРАШ</span></div>
+    <div class="nav-item" id="adm-nav" style="display:none;" onclick="showScr('admin', this)">⚙️<span>АДМИН</span></div>
+    <div class="nav-item" onclick="showScr('profile', this)">👤<span>ПРОФИЛЬ</span></div>
 </div>
 
 <div id="bet-modal" class="modal">
-    <h3 style="text-align:center; margin-top:0;">ENTER BET</h3>
-    <input type="number" id="bet-val" class="inp" value="0.1" step="0.1" min="0.1">
-    <button class="inp" style="background:var(--blue); border:none; padding:20px; font-weight:900;" onclick="confirmBet()">CONFIRM</button>
+    <h3 style="text-align:center; margin-top:0;">СУММА СТАВКИ</h3>
+    <input type="number" id="bet-val" class="inp" value="0.1" step="0.1">
+    <button class="inp" style="background:var(--blue); border:none; font-weight:900;" onclick="doBet()">ПОДТВЕРДИТЬ</button>
 </div>
 
 <script>
@@ -106,21 +116,21 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const tg = window.Telegram.WebApp;
-    tg.expand();
 
     const ADMIN_ID = 1929021302;
     const userId = tg.initDataUnsafe.user?.id || "582845661";
     const uName = tg.initDataUnsafe.user?.first_name || "User";
 
+    document.getElementById('u-id').innerText = userId;
+    document.getElementById('u-name').innerText = uName;
     if(userId == ADMIN_ID) document.getElementById('adm-nav').style.display='flex';
 
-    let uBal = 0, gBank = 0, myBet = 0, cashed = false, gStatus = "waiting";
+    let balance = 0, bank = 0, myBet = 0, cashed = false, gStatus = "waiting";
 
-    // Data Sync
-    db.ref('users/'+userId+'/balance').on('value', s => { uBal = s.val()||0; document.getElementById('u-bal').innerText = uBal.toFixed(2); });
-    db.ref('game_stats/bank').on('value', s => { gBank = s.val()||0; document.getElementById('adm-bank').innerText = gBank.toFixed(2) + " TON"; });
+    db.ref('users/'+userId+'/balance').on('value', s => { balance = s.val()||0; document.getElementById('u-bal').innerText = balance.toFixed(2); });
+    db.ref('game_stats/bank').on('value', s => { bank = s.val()||0; document.getElementById('adm-bank').innerText = bank.toFixed(2) + " TON"; });
 
-    // Server Engine (Admin only)
+    // SERVER (ADMIN)
     if(userId == ADMIN_ID) {
         setInterval(async () => {
             const snap = await db.ref('game').once('value');
@@ -129,74 +139,72 @@
             const now = Date.now();
 
             if(g.status === "waiting") {
-                if(now - g.ts > 5000) { // Авто-взлет каждые 5 сек
+                if(now - g.ts > 5000) { // Ракета летит сама через 5 сек
                     let cp = 1.01;
-                    if(gBank > 0) {
+                    if(bank > 0) {
                         let r = Math.random()*100;
-                        cp = r < 75 ? Math.random()*0.9 + 1.1 : Math.random()*2.5 + 2;
+                        cp = r < 70 ? Math.random()*0.9 + 1.1 : Math.random()*2.5 + 2;
                     }
                     db.ref('game').set({ status: "flying", multiplier: 1.00, cp: Number(cp.toFixed(2)), ts: now });
                 }
             } else if(g.status === "flying") {
                 let m = parseFloat(g.multiplier);
-                let nextM = Math.round((m + (m < 2 ? 0.01 : 0.05)) * 100) / 100;
-
+                let nextM = Math.round((m + (m < 2 ? 0.01 : 0.04)) * 100) / 100;
                 let payout = 0;
                 betsSnap.forEach(b => { if(b.val().status === "playing") payout += (b.val().amount * nextM); });
 
-                if(m >= g.cp || (payout >= gBank && gBank > 0) || (gBank <= 0 && m > 1.01)) {
+                if(m >= g.cp || (payout >= bank && bank > 0) || (bank <= 0 && m > 1.01)) {
                     db.ref('game').update({ status: "crash", multiplier: m, ts: now });
+                    db.ref('history').push(m);
                 } else {
                     db.ref('game/multiplier').set(nextM);
                 }
             } else if(g.status === "crash" && (now - g.ts > 4000)) {
-                db.ref('game').set({ status: "waiting", multiplier: 1.00, ts: now });
+                db.ref('game').set({ status: "waiting", multiplier: 1, ts: now });
                 db.ref('bets').remove();
             }
         }, 200);
     }
 
-    // Client View
+    // CLIENT
     db.ref('game').on('value', s => {
         const d = s.val(); if(!d) return;
         gStatus = d.status;
         const mEl = document.getElementById('mult'), btn = document.getElementById('main-btn'), rkt = document.getElementById('rocket');
-
         if(gStatus === "waiting") {
             mEl.innerText = "WAITING"; mEl.style.color = "#444";
-            btn.disabled = false; btn.innerText = "ПОСТАВИТЬ"; btn.className = "";
-            rkt.style.transform = "translate(0,0) rotate(0deg)"; rkt.style.opacity = "1";
+            btn.disabled = false; btn.innerText = "СТАВКА"; btn.className = "";
+            rkt.style.transform = "translate(0,0)"; rkt.style.opacity = "1";
             cashed = false; if(myBet > 0) btn.disabled = true;
         } else if(gStatus === "flying") {
             mEl.innerText = d.multiplier.toFixed(2) + "x"; mEl.style.color = "white";
-            let offset = Math.min((d.multiplier - 1) * 60, 240);
-            rkt.style.transform = `translate(${offset}px, -${offset}px) rotate(-15deg)`;
+            let p = Math.min((d.multiplier - 1) * 60, 250);
+            rkt.style.transform = `translate(${p}px, -${p}px) rotate(-15deg)`;
             if(myBet > 0 && !cashed) {
                 btn.innerText = "ЗАБРАТЬ " + (myBet * d.multiplier).toFixed(2);
                 btn.classList.add('cashout'); btn.disabled = false;
             }
         } else {
             mEl.innerText = d.multiplier.toFixed(2) + "x"; mEl.style.color = "var(--red)";
-            btn.disabled = true; btn.innerText = "CRASHED"; rkt.style.opacity = "0.1";
+            btn.disabled = true; btn.innerText = "BOOM"; rkt.style.opacity = "0.2";
         }
+    });
+
+    db.ref('history').limitToLast(12).on('value', s => {
+        const h = document.getElementById('history'); h.innerHTML = "";
+        let arr = []; s.forEach(c => arr.push(c.val()));
+        arr.reverse().forEach(v => h.innerHTML += `<div class="h-item" style="color:${v<2?'var(--red)':'var(--green)'}">${v.toFixed(2)}x</div>`);
     });
 
     db.ref('bets').on('value', s => {
         const list = document.getElementById('bet-list'); list.innerHTML = "";
         s.forEach(b => {
-            const data = b.val();
-            const isWin = data.status === "win";
-            list.innerHTML += `
-                <div class="bet-row ${isWin?'win':''}">
-                    <span>${data.name}</span>
-                    <span>${data.amount} TON</span>
-                    <span>${isWin ? 'CASHED OUT' : 'WAITING'}</span>
-                </div>
-            `;
+            const data = b.val(); const isWin = data.status === "win";
+            list.innerHTML += `<div class="bet-row ${isWin?'win':''}"><span>${data.name}</span><span>${data.amount} TON</span><span>${isWin?data.winMult.toFixed(2)+'x':'...'}</span></div>`;
         });
     });
 
-    function handleAction() {
+    function handleBtn() {
         if(gStatus === "waiting") document.getElementById('bet-modal').classList.add('active');
         else if(gStatus === "flying" && myBet > 0 && !cashed) {
             cashed = true;
@@ -204,16 +212,16 @@
             let win = myBet * m;
             db.ref('users/'+userId+'/balance').transaction(c => (c||0) + win);
             db.ref('game_stats/bank').transaction(c => (c||0) - win);
-            db.ref('bets/'+userId).update({ status: "win" });
-            myBet = 0; tg.HapticFeedback.notificationOccurred('success');
+            db.ref('bets/'+userId).update({ status: "win", winMult: m });
+            myBet = 0;
         }
     }
 
-    function confirmBet() {
+    function doBet() {
         let a = parseFloat(document.getElementById('bet-val').value);
-        if(a < 0.1 || uBal < a) { tg.showAlert("Low balance"); return; }
+        if(a < 0.1 || balance < a) { tg.showAlert("Error"); return; }
         db.ref('users/'+userId+'/balance').transaction(c => c - a);
-        db.ref('game_stats/bank').transaction(c => (c||0) + (a * 0.8)); // 20% комиссия
+        db.ref('game_stats/bank').transaction(c => (c||0) + (a * 0.8));
         db.ref('bets/'+userId).set({ amount: a, status: "playing", name: uName });
         myBet = a; document.getElementById('bet-modal').classList.remove('active');
     }
@@ -230,7 +238,7 @@
         document.getElementById('scr-'+id).classList.add('active'); el.classList.add('active');
     }
 
-    setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(()=>document.getElementById('loader').style.display='none', 500); }, 1500);
+    setTimeout(() => document.getElementById('loader').style.display='none', 1000);
 </script>
 </body>
 </html>
